@@ -90,6 +90,26 @@ public class RecordedVillagersData extends SavedData {
         return removed;
     }
 
+    public boolean updatePosition(UUID uuid, BlockPos pos, ResourceKey<Level> dimension) {
+        VillagerRecord record = records.get(uuid);
+        if (record == null || record.pos().equals(pos) && record.dimension().equals(dimension)) {
+            return false;
+        }
+        records.put(uuid, new VillagerRecord(
+                record.uuid(),
+                pos,
+                dimension,
+                record.offers(),
+                record.lockedOffers(),
+                record.profession(),
+                record.level(),
+                record.recordedAt(),
+                record.recordedBy()
+        ));
+        setDirty();
+        return true;
+    }
+
     public Map<UUID, VillagerRecord> getRecords() {
         return Collections.unmodifiableMap(records);
     }

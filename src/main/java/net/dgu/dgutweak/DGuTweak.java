@@ -55,7 +55,7 @@ public class DGuTweak implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(RequestTradeListC2SPayload.PACKET_ID, (payload, context) ->
                 context.server().execute(() -> sendTradeList(context.player())));
         ServerPlayNetworking.registerGlobalReceiver(GlowVillagerC2SPayload.PACKET_ID, (payload, context) ->
-                context.server().execute(() -> glowRecordedVillager(context.player(), payload.uuid())));
+                context.server().execute(() -> locateRecordedVillager(context.player(), payload.uuid(), payload.glow())));
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (entity instanceof Villager || entity instanceof WanderingTrader) {
                 removeRecordedMerchant(entity);
@@ -186,23 +186,41 @@ public class DGuTweak implements ModInitializer {
         }
     }
 
-    private static void glowRecordedVillager(ServerPlayer player, UUID uuid) {
+    private static void locateRecordedVillager(ServerPlayer player, UUID uuid, boolean glow) {
         for (ServerLevel level : player.level().getServer().getAllLevels()) {
             Entity entity = level.getEntity(uuid);
             if (entity instanceof Villager villager) {
-                villager.setGlowingTag(true);
-                villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
-                player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
+                updateRecordedPosition(villager);
+                if (glow) {
+                    villager.setGlowingTag(true);
+                    villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                    player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
+                } else {
+                    player.sendSystemMessage(Component.literal("[DGu-tweak] Updated villager position."));
+                }
+                sendTradeList(player);
                 return;
             }
             if (entity instanceof WanderingTrader trader) {
-                trader.setGlowingTag(true);
-                trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
-                player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
+                updateRecordedPosition(trader);
+                if (glow) {
+                    trader.setGlowingTag(true);
+                    trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                    player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
+                } else {
+                    player.sendSystemMessage(Component.literal("[DGu-tweak] Updated wandering trader position."));
+                }
+                sendTradeList(player);
                 return;
             }
         }
         player.sendSystemMessage(Component.literal("[DGu-tweak] Merchant is not loaded. Use Track/coordinates to navigate closer."));
+    }
+
+    private static void updateRecordedPosition(Entity entity) {
+        if (entity.level() instanceof ServerLevel level) {
+            RecordedVillagersData.getOrCreate(level).updatePosition(entity.getUUID(), entity.blockPosition(), level.dimension());
+        }
     }
 
     private static void removeRecordedMerchant(Entity entity) {

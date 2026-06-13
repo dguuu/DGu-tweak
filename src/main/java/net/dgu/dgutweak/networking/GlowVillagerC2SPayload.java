@@ -8,13 +8,16 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.UUID;
 
-public record GlowVillagerC2SPayload(UUID uuid) implements CustomPacketPayload {
+public record GlowVillagerC2SPayload(UUID uuid, boolean glow) implements CustomPacketPayload {
     public static final Type<GlowVillagerC2SPayload> PACKET_ID = new Type<>(DGuTweak.id("glow_villager"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, GlowVillagerC2SPayload> PACKET_CODEC =
             StreamCodec.of(
-                    (buffer, payload) -> buffer.writeUUID(payload.uuid()),
-                    buffer -> new GlowVillagerC2SPayload(buffer.readUUID())
+                    (buffer, payload) -> {
+                        buffer.writeUUID(payload.uuid());
+                        buffer.writeBoolean(payload.glow());
+                    },
+                    buffer -> new GlowVillagerC2SPayload(buffer.readUUID(), buffer.readBoolean())
             );
 
     @Override
