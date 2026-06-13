@@ -62,7 +62,7 @@ public class EnchantTradeGuideScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.fill(0, 0, this.width, this.height, 0xAA000000);
         int panelWidth = Math.min(360, this.width - 32);
         int panelHeight = Math.min(220, this.height - 24);
         int left = (this.width - panelWidth) / 2;
