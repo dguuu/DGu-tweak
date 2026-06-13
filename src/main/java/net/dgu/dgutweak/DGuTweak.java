@@ -180,11 +180,14 @@ public class DGuTweak implements ModInitializer {
                     record.profession(),
                     record.level(),
                     stackName(offer.getResult()),
+                    translationKey(offer.getResult()),
                     offer.getResult().getCount(),
                     stackName(offer.getBaseCostA()),
+                    translationKey(offer.getBaseCostA()),
                     offer.getBaseCostA().getCount(),
                     currentCostA.getCount(),
                     costB.isEmpty() ? "" : stackName(costB),
+                    costB.isEmpty() ? "" : translationKey(costB),
                     costB.isEmpty() ? 0 : costB.getCount(),
                     locked,
                     liveOffer != null,
@@ -269,6 +272,10 @@ public class DGuTweak implements ModInitializer {
         String name = stack.getHoverName().getString();
         String enchantments = enchantmentText(stack);
         return enchantments.isEmpty() ? name : name + ": " + enchantments;
+    }
+
+    private static String translationKey(ItemStack stack) {
+        return stack.isEmpty() ? "" : stack.getItem().getDescriptionId();
     }
 
     private static String enchantmentText(ItemStack stack) {

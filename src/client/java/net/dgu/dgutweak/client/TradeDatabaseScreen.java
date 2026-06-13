@@ -133,7 +133,7 @@ public class TradeDatabaseScreen extends Screen {
         drawDetails(graphics, detailsLeft, contentTop, detailsRight, contentBottom);
 
         if (this.trackedEntry != null) {
-            String text = t("tracking") + " " + this.trackedEntry.profession() + " @ " + posText(this.trackedEntry);
+            String text = t("tracking") + " " + professionName(this.trackedEntry.profession()) + " @ " + posText(this.trackedEntry);
             graphics.drawCenteredString(this.font, text, this.width / 2, this.height - 14, ACCENT);
         }
     }
@@ -305,7 +305,7 @@ public class TradeDatabaseScreen extends Screen {
             if (selected || hovered) {
                 graphics.fill(left - 2, y - 1, right, y + 17, selected ? SELECTED : 0x55444444);
             }
-            graphics.drawString(this.font, trim(profession + " (" + countProfession(profession) + ")", right - left - 4), left, y + 4, selected ? 0xFFFFFFFF : TEXT);
+            graphics.drawString(this.font, trim(professionName(profession) + " (" + countProfession(profession) + ")", right - left - 4), left, y + 4, selected ? 0xFFFFFFFF : TEXT);
         }
     }
 
@@ -325,8 +325,8 @@ public class TradeDatabaseScreen extends Screen {
             if (selected || hovered) {
                 graphics.fill(left - 2, y - 1, right, y + 22, selected ? SELECTED : 0x55444444);
             }
-            graphics.drawString(this.font, trim(entry.resultCount() + "x " + entry.resultName(), right - left - 6), left, y, selected ? 0xFFFFFFFF : TEXT);
-            graphics.drawString(this.font, trim(costText(entry) + " | " + distanceText(entry), right - left - 6), left, y + 10, entry.live() ? ACCENT : MUTED);
+            graphics.drawString(this.font, trim(entry.resultCount() + "x " + resultName(entry), right - left - 6), left, y, selected ? 0xFFFFFFFF : TEXT);
+            graphics.drawString(this.font, trim(priceText(entry) + " | " + distanceText(entry), right - left - 6), left, y + 10, entry.live() ? ACCENT : MUTED);
         }
     }
 
@@ -336,10 +336,10 @@ public class TradeDatabaseScreen extends Screen {
         }
         TradeListS2CPayload.Entry entry = selectedEntry();
         int y = top;
-        graphics.drawString(this.font, trim(entry.resultCount() + "x " + entry.resultName(), right - left), left, y, 0xFFFFFFFF);
+        graphics.drawString(this.font, trim(entry.resultCount() + "x " + resultName(entry), right - left), left, y, 0xFFFFFFFF);
         y += 14;
-        y = drawLine(graphics, t("price"), costText(entry) + (entry.live() ? " (" + t("live") + ")" : " (" + t("recorded") + ")"), left, right, y);
-        y = drawLine(graphics, t("villager"), entry.profession() + " L" + entry.level(), left, right, y);
+        y = drawLine(graphics, t("price"), priceText(entry), left, right, y);
+        y = drawLine(graphics, t("villager"), professionName(entry.profession()) + " L" + entry.level(), left, right, y);
         y = drawLine(graphics, t("position"), posText(entry), left, right, y);
         y = drawLine(graphics, t("distance"), distanceText(entry), left, right, y);
         y = drawLine(graphics, t("status"), entry.locked() ? t("locked_trade") : (entry.live() ? t("loaded") : t("not_loaded")), left, right, y);
@@ -420,7 +420,10 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String searchable(TradeListS2CPayload.Entry entry) {
-        return (entry.resultName() + " " + entry.costAName() + " " + entry.costBName() + " " + entry.profession() + " " + posText(entry))
+        return (entry.resultName() + " " + resultName(entry) + " "
+                + entry.costAName() + " " + costAName(entry) + " "
+                + entry.costBName() + " " + costBName(entry) + " "
+                + entry.profession() + " " + professionName(entry.profession()) + " " + posText(entry))
                 .toLowerCase(Locale.ROOT);
     }
 
@@ -429,7 +432,9 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String bestGroupKey(TradeListS2CPayload.Entry entry) {
-        return entry.resultName() + "|" + entry.resultCount() + "|" + entry.costAName() + "|" + entry.costBName();
+        return stackGroupKey(entry.resultName(), entry.resultTranslationKey()) + "|" + entry.resultCount()
+                + "|" + stackGroupKey(entry.costAName(), entry.costATranslationKey())
+                + "|" + stackGroupKey(entry.costBName(), entry.costBTranslationKey());
     }
 
     private static int compareValue(TradeListS2CPayload.Entry first, TradeListS2CPayload.Entry second) {
@@ -445,11 +450,48 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String costText(TradeListS2CPayload.Entry entry) {
-        String text = entry.currentCostA() + "x " + entry.costAName();
-        if (entry.costB() > 0) {
-            text += " + " + entry.costB() + "x " + entry.costBName();
+        return costText(entry.currentCostA(), costAName(entry), entry.costB(), costBName(entry));
+    }
+
+    private static String recordedCostText(TradeListS2CPayload.Entry entry) {
+        return costText(entry.baseCostA(), costAName(entry), entry.costB(), costBName(entry));
+    }
+
+    private static String costText(int costA, String costAName, int costB, String costBName) {
+        String text = costA + "x " + costAName;
+        if (costB > 0) {
+            text += " + " + costB + "x " + costBName;
         }
         return text;
+    }
+
+    private static String priceText(TradeListS2CPayload.Entry entry) {
+        String current = costText(entry);
+        String recorded = recordedCostText(entry);
+        if (entry.live() && entry.currentCostA() != entry.baseCostA()) {
+            return current + " (" + t("recorded_price") + " " + recorded + ")";
+        }
+        return current + (entry.live() ? " (" + t("current_price") + ")" : " (" + t("recorded_price") + ")");
+    }
+
+    private static String resultName(TradeListS2CPayload.Entry entry) {
+        return DGuTweakClientConfig.itemName(entry.resultName(), entry.resultTranslationKey());
+    }
+
+    private static String costAName(TradeListS2CPayload.Entry entry) {
+        return DGuTweakClientConfig.itemName(entry.costAName(), entry.costATranslationKey());
+    }
+
+    private static String costBName(TradeListS2CPayload.Entry entry) {
+        return DGuTweakClientConfig.itemName(entry.costBName(), entry.costBTranslationKey());
+    }
+
+    private static String professionName(String profession) {
+        return t("profession." + profession);
+    }
+
+    private static String stackGroupKey(String fallbackName, String translationKey) {
+        return translationKey == null || translationKey.isBlank() ? fallbackName : translationKey;
     }
 
     private static String distanceText(TradeListS2CPayload.Entry entry) {

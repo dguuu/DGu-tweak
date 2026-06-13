@@ -45,11 +45,14 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
             String profession,
             int level,
             String resultName,
+            String resultTranslationKey,
             int resultCount,
             String costAName,
+            String costATranslationKey,
             int baseCostA,
             int currentCostA,
             String costBName,
+            String costBTranslationKey,
             int costB,
             boolean locked,
             boolean live,
@@ -63,10 +66,13 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
                     buffer.readUtf(),
                     buffer.readVarInt(),
                     buffer.readUtf(),
+                    buffer.readUtf(),
                     buffer.readVarInt(),
+                    buffer.readUtf(),
                     buffer.readUtf(),
                     buffer.readVarInt(),
                     buffer.readVarInt(),
+                    buffer.readUtf(),
                     buffer.readUtf(),
                     buffer.readVarInt(),
                     buffer.readBoolean(),
@@ -82,11 +88,14 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
             buffer.writeUtf(profession);
             buffer.writeVarInt(level);
             buffer.writeUtf(resultName);
+            buffer.writeUtf(resultTranslationKey);
             buffer.writeVarInt(resultCount);
             buffer.writeUtf(costAName);
+            buffer.writeUtf(costATranslationKey);
             buffer.writeVarInt(baseCostA);
             buffer.writeVarInt(currentCostA);
             buffer.writeUtf(costBName);
+            buffer.writeUtf(costBTranslationKey);
             buffer.writeVarInt(costB);
             buffer.writeBoolean(locked);
             buffer.writeBoolean(live);

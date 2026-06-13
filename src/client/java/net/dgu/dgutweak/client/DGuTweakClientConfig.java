@@ -1,7 +1,12 @@
 package net.dgu.dgutweak.client;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.dgu.dgutweak.DGuTweak;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -10,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -18,6 +24,7 @@ public final class DGuTweakClientConfig {
     private static final String CONFIG_FILE = "dgutweak-client.properties";
     private static final String DEFAULT_LANGUAGE = "zh_tw";
     private static final Map<String, Map<String, String>> TRANSLATIONS = createTranslations();
+    private static final Map<String, Map<String, String>> VANILLA_TRANSLATIONS = new HashMap<>();
 
     private static boolean loaded;
     private static String language = DEFAULT_LANGUAGE;
@@ -62,6 +69,27 @@ public final class DGuTweakClientConfig {
         return TRANSLATIONS.get("en_us").getOrDefault(key, key);
     }
 
+    public static String itemName(String fallback, String translationKey) {
+        if (!loaded) {
+            load();
+        }
+        if (translationKey == null || translationKey.isBlank()) {
+            return fallback;
+        }
+
+        String suffix = "";
+        int suffixStart = fallback.indexOf(": ");
+        if (suffixStart >= 0) {
+            suffix = fallback.substring(suffixStart);
+        }
+
+        String translated = vanillaTranslations(language).get(translationKey);
+        if (translated == null) {
+            translated = vanillaTranslations("en_us").get(translationKey);
+        }
+        return translated == null ? fallback : translated + suffix;
+    }
+
     public static String language() {
         if (!loaded) {
             load();
@@ -102,35 +130,76 @@ public final class DGuTweakClientConfig {
         }
     }
 
+    private static Map<String, String> vanillaTranslations(String language) {
+        return VANILLA_TRANSLATIONS.computeIfAbsent(language, DGuTweakClientConfig::loadVanillaTranslations);
+    }
+
+    private static Map<String, String> loadVanillaTranslations(String language) {
+        Map<String, String> translations = new HashMap<>();
+        Identifier id = Identifier.fromNamespaceAndPath("minecraft", "lang/" + language + ".json");
+        List<Resource> resources = Minecraft.getInstance().getResourceManager().getResourceStack(id);
+        for (Resource resource : resources) {
+            try (Reader reader = resource.openAsReader()) {
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
+                    if (entry.getValue().isJsonPrimitive()) {
+                        translations.put(entry.getKey(), entry.getValue().getAsString());
+                    }
+                }
+            } catch (RuntimeException | IOException exception) {
+                DGuTweak.LOGGER.warn("Failed to load language resource {}", id, exception);
+            }
+        }
+        return translations;
+    }
+
     private static Map<String, Map<String, String>> createTranslations() {
         Map<String, Map<String, String>> translations = new HashMap<>();
 
         Map<String, String> zhTw = new HashMap<>();
-        zhTw.put("title", "交易資料庫");
-        zhTw.put("search", "搜尋交易");
-        zhTw.put("best", "最佳");
-        zhTw.put("all", "全部");
-        zhTw.put("refresh", "刷新");
-        zhTw.put("close", "關閉");
-        zhTw.put("profession", "職業");
-        zhTw.put("no_records", "沒有記錄");
-        zhTw.put("best_trades", "最佳交易");
-        zhTw.put("all_trades", "全部交易");
-        zhTw.put("no_trades", "這個篩選沒有交易");
-        zhTw.put("price", "價格");
-        zhTw.put("villager", "村民");
-        zhTw.put("position", "位置");
-        zhTw.put("distance", "距離");
-        zhTw.put("status", "狀態");
-        zhTw.put("locked_trade", "未解鎖交易");
-        zhTw.put("loaded", "已載入");
-        zhTw.put("not_loaded", "未載入");
-        zhTw.put("glow", "發光");
-        zhTw.put("track", "追蹤");
-        zhTw.put("tracking", "追蹤");
-        zhTw.put("other_dimension", "其他維度");
-        zhTw.put("live", "目前");
-        zhTw.put("recorded", "記錄");
+        zhTw.put("title", "\u4ea4\u6613\u8cc7\u6599\u5eab");
+        zhTw.put("search", "\u641c\u5c0b\u4ea4\u6613");
+        zhTw.put("best", "\u6700\u4f73");
+        zhTw.put("all", "\u5168\u90e8");
+        zhTw.put("refresh", "\u5237\u65b0");
+        zhTw.put("close", "\u95dc\u9589");
+        zhTw.put("profession", "\u8077\u696d");
+        zhTw.put("no_records", "\u6c92\u6709\u8a18\u9304");
+        zhTw.put("best_trades", "\u6700\u4f73\u4ea4\u6613");
+        zhTw.put("all_trades", "\u5168\u90e8\u4ea4\u6613");
+        zhTw.put("no_trades", "\u9019\u500b\u7be9\u9078\u6c92\u6709\u4ea4\u6613");
+        zhTw.put("price", "\u50f9\u683c");
+        zhTw.put("villager", "\u6751\u6c11");
+        zhTw.put("position", "\u4f4d\u7f6e");
+        zhTw.put("distance", "\u8ddd\u96e2");
+        zhTw.put("status", "\u72c0\u614b");
+        zhTw.put("locked_trade", "\u672a\u89e3\u9396\u4ea4\u6613");
+        zhTw.put("loaded", "\u5df2\u8f09\u5165");
+        zhTw.put("not_loaded", "\u672a\u8f09\u5165");
+        zhTw.put("glow", "\u767c\u5149");
+        zhTw.put("track", "\u8ffd\u8e64");
+        zhTw.put("tracking", "\u8ffd\u8e64");
+        zhTw.put("other_dimension", "\u5176\u4ed6\u7dad\u5ea6");
+        zhTw.put("live", "\u76ee\u524d");
+        zhTw.put("recorded", "\u8a18\u9304");
+        zhTw.put("current_price", "\u76ee\u524d");
+        zhTw.put("recorded_price", "\u8a18\u9304");
+        zhTw.put("profession.armorer", "\u88fd\u7532\u5e2b");
+        zhTw.put("profession.butcher", "\u5c60\u592b");
+        zhTw.put("profession.cartographer", "\u88fd\u5716\u5e2b");
+        zhTw.put("profession.cleric", "\u7267\u5e2b");
+        zhTw.put("profession.farmer", "\u8fb2\u6c11");
+        zhTw.put("profession.fisherman", "\u6f01\u592b");
+        zhTw.put("profession.fletcher", "\u88fd\u7bad\u5e2b");
+        zhTw.put("profession.leatherworker", "\u76ae\u9769\u5de5\u5320");
+        zhTw.put("profession.librarian", "\u5716\u66f8\u7ba1\u7406\u54e1");
+        zhTw.put("profession.mason", "\u77f3\u5320");
+        zhTw.put("profession.nitwit", "\u50bb\u5b50");
+        zhTw.put("profession.none", "\u7121\u8077\u696d");
+        zhTw.put("profession.shepherd", "\u7267\u7f8a\u4eba");
+        zhTw.put("profession.toolsmith", "\u5de5\u5177\u5320");
+        zhTw.put("profession.weaponsmith", "\u6b66\u5668\u5320");
+        zhTw.put("profession.wandering_trader", "\u6d41\u6d6a\u5546\u4eba");
         translations.put("zh_tw", zhTw);
 
         Map<String, String> enUs = new HashMap<>();
@@ -159,6 +228,24 @@ public final class DGuTweakClientConfig {
         enUs.put("other_dimension", "other dimension");
         enUs.put("live", "live");
         enUs.put("recorded", "recorded");
+        enUs.put("current_price", "current");
+        enUs.put("recorded_price", "recorded");
+        enUs.put("profession.armorer", "armorer");
+        enUs.put("profession.butcher", "butcher");
+        enUs.put("profession.cartographer", "cartographer");
+        enUs.put("profession.cleric", "cleric");
+        enUs.put("profession.farmer", "farmer");
+        enUs.put("profession.fisherman", "fisherman");
+        enUs.put("profession.fletcher", "fletcher");
+        enUs.put("profession.leatherworker", "leatherworker");
+        enUs.put("profession.librarian", "librarian");
+        enUs.put("profession.mason", "mason");
+        enUs.put("profession.nitwit", "nitwit");
+        enUs.put("profession.none", "none");
+        enUs.put("profession.shepherd", "shepherd");
+        enUs.put("profession.toolsmith", "toolsmith");
+        enUs.put("profession.weaponsmith", "weaponsmith");
+        enUs.put("profession.wandering_trader", "wandering trader");
         translations.put("en_us", enUs);
 
         return translations;
