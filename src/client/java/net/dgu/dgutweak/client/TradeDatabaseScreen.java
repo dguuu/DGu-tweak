@@ -76,6 +76,10 @@ public class TradeDatabaseScreen extends Screen {
         restoreSelectedTrade(selectedTradeKey);
     }
 
+    public List<TradeListS2CPayload.Entry> entriesSnapshot() {
+        return List.copyOf(this.allEntries);
+    }
+
     @Override
     protected void init() {
         int panelWidth = Math.min(650, this.width - 24);
@@ -252,7 +256,7 @@ public class TradeDatabaseScreen extends Screen {
                 if (!isBestEligible(entry)) {
                     continue;
                 }
-                String key = entry.resultName() + " x" + entry.resultCount();
+                String key = bestGroupKey(entry);
                 TradeListS2CPayload.Entry existing = best.get(key);
                 if (existing == null || compareValue(entry, existing) < 0) {
                     best.put(key, entry);
@@ -422,6 +426,10 @@ public class TradeDatabaseScreen extends Screen {
 
     private static String tradeKey(TradeListS2CPayload.Entry entry) {
         return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount() + "|" + entry.baseCostA() + "|" + entry.costB();
+    }
+
+    private static String bestGroupKey(TradeListS2CPayload.Entry entry) {
+        return entry.resultName() + "|" + entry.resultCount() + "|" + entry.costAName() + "|" + entry.costBName();
     }
 
     private static int compareValue(TradeListS2CPayload.Entry first, TradeListS2CPayload.Entry second) {

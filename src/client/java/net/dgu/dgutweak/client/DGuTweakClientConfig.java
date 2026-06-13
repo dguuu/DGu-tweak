@@ -62,9 +62,44 @@ public final class DGuTweakClientConfig {
         return TRANSLATIONS.get("en_us").getOrDefault(key, key);
     }
 
+    public static String language() {
+        if (!loaded) {
+            load();
+        }
+        return language;
+    }
+
+    public static boolean setLanguage(String value) {
+        String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (!TRANSLATIONS.containsKey(normalized)) {
+            return false;
+        }
+
+        language = normalized;
+        loaded = true;
+        save();
+        return true;
+    }
+
     private static String normalizeLanguage(String value) {
         String normalized = value == null ? DEFAULT_LANGUAGE : value.trim().toLowerCase(Locale.ROOT);
         return TRANSLATIONS.containsKey(normalized) ? normalized : DEFAULT_LANGUAGE;
+    }
+
+    private static void save() {
+        Path path = Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve(CONFIG_FILE);
+        Properties properties = new Properties();
+        properties.setProperty("language", language);
+        try {
+            Files.createDirectories(path.getParent());
+            try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+                writer.write("# DGu Tweak client config\n");
+                writer.write("# language: zh_tw or en_us\n");
+                properties.store(writer, null);
+            }
+        } catch (IOException exception) {
+            DGuTweak.LOGGER.warn("Failed to save DGu Tweak client config", exception);
+        }
     }
 
     private static Map<String, Map<String, String>> createTranslations() {
