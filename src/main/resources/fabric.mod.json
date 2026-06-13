@@ -16,6 +16,9 @@
   "entrypoints": {
     "main": [
       "net.dgu.dgutweak.DGuTweak"
+    ],
+    "client": [
+      "net.dgu.dgutweak.client.DGuTweakClient"
     ]
   },
   "mixins": [

@@ -82,6 +82,14 @@ public class RecordedVillagersData extends SavedData {
         return existed ? RecordResult.UPDATED : RecordResult.ADDED;
     }
 
+    public boolean remove(UUID uuid) {
+        boolean removed = records.remove(uuid) != null;
+        if (removed) {
+            setDirty();
+        }
+        return removed;
+    }
+
     public Map<UUID, VillagerRecord> getRecords() {
         return Collections.unmodifiableMap(records);
     }

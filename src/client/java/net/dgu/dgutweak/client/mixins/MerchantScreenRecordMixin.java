@@ -1,6 +1,6 @@
 package net.dgu.dgutweak.client.mixins;
 
-import net.dgu.dgutweak.client.EnchantTradeGuideScreen;
+import net.dgu.dgutweak.client.DGuTweakClient;
 import net.dgu.dgutweak.networking.RecordVillagerC2SPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -41,7 +41,7 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                 .size(40, 14)
                 .build());
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.guide"), button -> Minecraft.getInstance().setScreen(new EnchantTradeGuideScreen(this)))
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> DGuTweakClient.requestTradeList())
                 .pos(buttonX + 82, buttonY)
                 .size(40, 14)
                 .build());

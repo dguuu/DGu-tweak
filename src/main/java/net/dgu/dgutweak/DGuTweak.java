@@ -1,8 +1,12 @@
 package net.dgu.dgutweak;
 
 import net.dgu.dgutweak.data.RecordedVillagersData;
+import net.dgu.dgutweak.networking.GlowVillagerC2SPayload;
 import net.dgu.dgutweak.networking.RecordVillagerC2SPayload;
+import net.dgu.dgutweak.networking.RequestTradeListC2SPayload;
+import net.dgu.dgutweak.networking.TradeListS2CPayload;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -12,8 +16,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,10 +42,22 @@ public class DGuTweak implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Initializing");
         PayloadTypeRegistry.playC2S().register(RecordVillagerC2SPayload.PACKET_ID, RecordVillagerC2SPayload.PACKET_CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestTradeListC2SPayload.PACKET_ID, RequestTradeListC2SPayload.PACKET_CODEC);
+        PayloadTypeRegistry.playC2S().register(GlowVillagerC2SPayload.PACKET_ID, GlowVillagerC2SPayload.PACKET_CODEC);
+        PayloadTypeRegistry.playS2C().register(TradeListS2CPayload.PACKET_ID, TradeListS2CPayload.PACKET_CODEC);
 
         DGuTweakCommand.register();
         ServerPlayNetworking.registerGlobalReceiver(RecordVillagerC2SPayload.PACKET_ID, (payload, context) ->
                 context.server().execute(() -> recordMerchant(context.player(), payload.entityId(), false, 40)));
+        ServerPlayNetworking.registerGlobalReceiver(RequestTradeListC2SPayload.PACKET_ID, (payload, context) ->
+                context.server().execute(() -> sendTradeList(context.player())));
+        ServerPlayNetworking.registerGlobalReceiver(GlowVillagerC2SPayload.PACKET_ID, (payload, context) ->
+                context.server().execute(() -> glowRecordedVillager(context.player(), payload.uuid())));
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
+            if (entity instanceof Villager || entity instanceof WanderingTrader) {
+                removeRecordedMerchant(entity);
+            }
+        });
         ServerTickEvents.END_SERVER_TICK.register(server -> tickPendingRecords());
     }
 
@@ -112,6 +132,91 @@ public class DGuTweak implements ModInitializer {
 
     public static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MOD_ID, path);
+    }
+
+    public static void sendTradeList(ServerPlayer player) {
+        List<TradeListS2CPayload.Entry> entries = new ArrayList<>();
+        for (ServerLevel level : player.level().getServer().getAllLevels()) {
+            RecordedVillagersData data = RecordedVillagersData.getOrCreate(level);
+            for (RecordedVillagersData.VillagerRecord record : data.getRecords().values()) {
+                Entity entity = level.getEntity(record.uuid());
+                MerchantOffers liveOffers = entity instanceof Villager villager ? villager.getOffers()
+                        : entity instanceof WanderingTrader trader ? trader.getOffers()
+                        : null;
+                addTradeEntries(player, record, record.offers(), liveOffers, false, entries);
+                addTradeEntries(player, record, record.lockedOffers(), null, true, entries);
+            }
+        }
+        ServerPlayNetworking.send(player, new TradeListS2CPayload(entries));
+    }
+
+    private static void addTradeEntries(ServerPlayer player, RecordedVillagersData.VillagerRecord record, MerchantOffers offers,
+                                        MerchantOffers liveOffers, boolean locked, List<TradeListS2CPayload.Entry> entries) {
+        int index = 0;
+        for (MerchantOffer offer : offers) {
+            MerchantOffer liveOffer = liveOffers != null && index < liveOffers.size() && sameResult(offer, liveOffers.get(index))
+                    ? liveOffers.get(index)
+                    : null;
+            ItemStack currentCostA = liveOffer == null ? offer.getBaseCostA() : liveOffer.getCostA();
+            ItemStack costB = liveOffer == null ? offer.getCostB() : liveOffer.getCostB();
+            double distance = player.level().dimension().equals(record.dimension())
+                    ? player.position().distanceTo(record.pos().getCenter())
+                    : -1.0D;
+            entries.add(new TradeListS2CPayload.Entry(
+                    record.uuid(),
+                    record.pos(),
+                    record.dimension().identifier(),
+                    record.profession(),
+                    record.level(),
+                    stackName(offer.getResult()),
+                    offer.getResult().getCount(),
+                    stackName(offer.getBaseCostA()),
+                    offer.getBaseCostA().getCount(),
+                    currentCostA.getCount(),
+                    costB.isEmpty() ? "" : stackName(costB),
+                    costB.isEmpty() ? 0 : costB.getCount(),
+                    locked,
+                    liveOffer != null,
+                    distance
+            ));
+            index++;
+        }
+    }
+
+    private static void glowRecordedVillager(ServerPlayer player, UUID uuid) {
+        for (ServerLevel level : player.level().getServer().getAllLevels()) {
+            Entity entity = level.getEntity(uuid);
+            if (entity instanceof Villager villager) {
+                villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
+                return;
+            }
+            if (entity instanceof WanderingTrader trader) {
+                trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
+                return;
+            }
+        }
+        player.sendSystemMessage(Component.literal("[DGu-tweak] Merchant is not loaded. Use Track/coordinates to navigate closer."));
+    }
+
+    private static void removeRecordedMerchant(Entity entity) {
+        if (!(entity.level() instanceof ServerLevel level)) {
+            return;
+        }
+        RecordedVillagersData data = RecordedVillagersData.getOrCreate(level);
+        if (data.remove(entity.getUUID())) {
+            LOGGER.info("Removed dead recorded merchant {}", entity.getUUID());
+        }
+    }
+
+    private static boolean sameResult(MerchantOffer first, MerchantOffer second) {
+        return stackName(first.getResult()).equals(stackName(second.getResult()))
+                && first.getResult().getCount() == second.getResult().getCount();
+    }
+
+    private static String stackName(ItemStack stack) {
+        return stack.getHoverName().getString();
     }
 
     private static MerchantOffers getVisibleTradersLockedOffers(Villager villager) {

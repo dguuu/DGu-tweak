@@ -69,6 +69,21 @@ public class DGuTweakCommand {
                                 )
                         )
         );
+        dispatcher.register(
+                Commands.literal("dgu")
+                        .then(Commands.literal("trades")
+                                .executes(context -> openTradeUi(context.getSource()))
+                        )
+        );
+    }
+
+    private static int openTradeUi(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal("This command can only be used by a player."));
+            return 0;
+        }
+        DGuTweak.sendTradeList(player);
+        return 1;
     }
 
     private static int listVillagers(CommandSourceStack source, String professionFilter, String sort) {
