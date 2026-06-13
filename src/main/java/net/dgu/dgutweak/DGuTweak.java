@@ -95,8 +95,8 @@ public class DGuTweak implements ModInitializer {
                     villager.getUUID(),
                     villager.blockPosition(),
                     level.dimension(),
-                    villager.getOffers(),
-                    lockedOffers,
+                    validOffers(villager.getOffers()),
+                    validOffers(lockedOffers),
                     profession,
                     villagerLevel,
                     recordedAt,
@@ -118,7 +118,7 @@ public class DGuTweak implements ModInitializer {
                     trader.getUUID(),
                     trader.blockPosition(),
                     level.dimension(),
-                    trader.getOffers(),
+                    validOffers(trader.getOffers()),
                     new MerchantOffers(),
                     "wandering_trader",
                     1,
@@ -141,6 +141,10 @@ public class DGuTweak implements ModInitializer {
         List<TradeListS2CPayload.Entry> entries = new ArrayList<>();
         for (ServerLevel level : player.level().getServer().getAllLevels()) {
             RecordedVillagersData data = RecordedVillagersData.getOrCreate(level);
+            int sanitized = data.sanitize();
+            if (sanitized > 0) {
+                LOGGER.info("Sanitized {} recorded merchant records in {}", sanitized, level.dimension().identifier());
+            }
             for (RecordedVillagersData.VillagerRecord record : data.getRecords().values()) {
                 Entity entity = level.getEntity(record.uuid());
                 MerchantOffers liveOffers = entity instanceof Villager villager ? villager.getOffers()
@@ -157,6 +161,10 @@ public class DGuTweak implements ModInitializer {
                                         MerchantOffers liveOffers, boolean locked, List<TradeListS2CPayload.Entry> entries) {
         int index = 0;
         for (MerchantOffer offer : offers) {
+            if (!isValidOffer(offer)) {
+                index++;
+                continue;
+            }
             MerchantOffer liveOffer = liveOffers != null && index < liveOffers.size() && sameResult(offer, liveOffers.get(index))
                     ? liveOffers.get(index)
                     : null;
@@ -234,8 +242,27 @@ public class DGuTweak implements ModInitializer {
     }
 
     private static boolean sameResult(MerchantOffer first, MerchantOffer second) {
+        if (!isValidOffer(first) || !isValidOffer(second)) {
+            return false;
+        }
         return stackName(first.getResult()).equals(stackName(second.getResult()))
                 && first.getResult().getCount() == second.getResult().getCount();
+    }
+
+    private static MerchantOffers validOffers(MerchantOffers offers) {
+        MerchantOffers filtered = new MerchantOffers();
+        for (MerchantOffer offer : offers) {
+            if (isValidOffer(offer)) {
+                filtered.add(offer);
+            }
+        }
+        return filtered;
+    }
+
+    private static boolean isValidOffer(MerchantOffer offer) {
+        return offer != null
+                && !offer.getBaseCostA().isEmpty()
+                && !offer.getResult().isEmpty();
     }
 
     private static String stackName(ItemStack stack) {

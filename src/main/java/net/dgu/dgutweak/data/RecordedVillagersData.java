@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -110,7 +111,45 @@ public class RecordedVillagersData extends SavedData {
         return true;
     }
 
+    public int sanitize() {
+        int changed = 0;
+        Map<UUID, VillagerRecord> replacements = new LinkedHashMap<>();
+        for (VillagerRecord record : records.values()) {
+            MerchantOffers offers = validOffers(record.offers());
+            MerchantOffers lockedOffers = validOffers(record.lockedOffers());
+            if (offers.size() != record.offers().size() || lockedOffers.size() != record.lockedOffers().size()) {
+                replacements.put(record.uuid(), new VillagerRecord(
+                        record.uuid(),
+                        record.pos(),
+                        record.dimension(),
+                        offers,
+                        lockedOffers,
+                        record.profession(),
+                        record.level(),
+                        record.recordedAt(),
+                        record.recordedBy()
+                ));
+                changed++;
+            }
+        }
+        replacements.forEach(records::put);
+        if (changed > 0) {
+            setDirty();
+        }
+        return changed;
+    }
+
     public Map<UUID, VillagerRecord> getRecords() {
         return Collections.unmodifiableMap(records);
+    }
+
+    private static MerchantOffers validOffers(MerchantOffers offers) {
+        MerchantOffers filtered = new MerchantOffers();
+        for (MerchantOffer offer : offers) {
+            if (offer != null && !offer.getBaseCostA().isEmpty() && !offer.getResult().isEmpty()) {
+                filtered.add(offer);
+            }
+        }
+        return filtered;
     }
 }

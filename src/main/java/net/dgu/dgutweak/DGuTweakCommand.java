@@ -101,6 +101,7 @@ public class DGuTweakCommand {
         int skipped = 0;
         for (ServerLevel level : player.level().getServer().getAllLevels()) {
             RecordedVillagersData data = RecordedVillagersData.getOrCreate(level);
+            data.sanitize();
             List<UUID> stale = new ArrayList<>();
             for (RecordedVillagersData.VillagerRecord record : data.getRecords().values()) {
                 if (!level.isLoaded(record.pos())) {
