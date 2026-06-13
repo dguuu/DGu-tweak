@@ -1,4 +1,9 @@
 {
   "gui.dgutweak.record": "Record",
-  "gui.dgutweak.query": "Query"
+  "gui.dgutweak.query": "Query",
+  "gui.dgutweak.guide": "Guide",
+  "gui.dgutweak.guide.title": "Trade Guide",
+  "gui.dgutweak.guide.search": "Search",
+  "gui.dgutweak.guide.no_results": "No matches",
+  "gui.dgutweak.close": "Close"
 }
