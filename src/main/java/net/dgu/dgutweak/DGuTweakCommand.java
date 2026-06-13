@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
@@ -74,6 +75,9 @@ public class DGuTweakCommand {
                         .then(Commands.literal("trades")
                                 .executes(context -> openTradeUi(context.getSource()))
                         )
+                        .then(Commands.literal("verify")
+                                .executes(context -> verifyRecordedMerchants(context.getSource()))
+                        )
         );
     }
 
@@ -84,6 +88,44 @@ public class DGuTweakCommand {
         }
         DGuTweak.sendTradeList(player);
         return 1;
+    }
+
+    private static int verifyRecordedMerchants(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal("This command can only be used by a player."));
+            return 0;
+        }
+
+        int kept = 0;
+        int removed = 0;
+        int skipped = 0;
+        for (ServerLevel level : player.level().getServer().getAllLevels()) {
+            RecordedVillagersData data = RecordedVillagersData.getOrCreate(level);
+            List<UUID> stale = new ArrayList<>();
+            for (RecordedVillagersData.VillagerRecord record : data.getRecords().values()) {
+                if (!level.isLoaded(record.pos())) {
+                    skipped++;
+                    continue;
+                }
+                Entity entity = level.getEntity(record.uuid());
+                if (entity instanceof Villager || entity instanceof WanderingTrader) {
+                    kept++;
+                } else {
+                    stale.add(record.uuid());
+                }
+            }
+            for (UUID uuid : stale) {
+                if (data.remove(uuid)) {
+                    removed++;
+                }
+            }
+        }
+
+        int finalKept = kept;
+        int finalRemoved = removed;
+        int finalSkipped = skipped;
+        source.sendSuccess(() -> Component.literal("[DGu-tweak] Verify complete. Alive/loaded: " + finalKept + ", removed missing in loaded chunks: " + finalRemoved + ", skipped unloaded: " + finalSkipped + "."), false);
+        return removed;
     }
 
     private static int listVillagers(CommandSourceStack source, String professionFilter, String sort) {

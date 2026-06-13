@@ -37,6 +37,8 @@ public class TradeDatabaseScreen extends Screen {
     private int selectedIndex;
     private int scrollOffset;
     private TradeListS2CPayload.Entry trackedEntry;
+    private int actionButtonX;
+    private int actionButtonY;
 
     public TradeDatabaseScreen(List<TradeListS2CPayload.Entry> entries) {
         super(Component.translatable("gui.dgutweak.trades.title"));
@@ -207,11 +209,12 @@ public class TradeDatabaseScreen extends Screen {
         y = drawLine(graphics, "距離", entry.distance() < 0 ? "其他維度" : String.format(Locale.ROOT, "%.0fm", entry.distance()), left, right, y);
         y = drawLine(graphics, "狀態", entry.locked() ? "Locked trade" : (entry.live() ? "已載入，可發光" : "未載入，請靠近座標"), left, right, y);
 
-        int buttonY = Math.min(bottom - 18, y + 8);
-        graphics.fill(left, buttonY, left + 56, buttonY + 16, 0xFF2D4F66);
-        graphics.drawCenteredString(this.font, "Glow", left + 28, buttonY + 4, 0xFFFFFFFF);
-        graphics.fill(left + 62, buttonY, left + 118, buttonY + 16, 0xFF3F4F2D);
-        graphics.drawCenteredString(this.font, "Track", left + 90, buttonY + 4, 0xFFFFFFFF);
+        this.actionButtonX = left;
+        this.actionButtonY = Math.min(bottom - 18, y + 8);
+        graphics.fill(this.actionButtonX, this.actionButtonY, this.actionButtonX + 56, this.actionButtonY + 16, 0xFF2D4F66);
+        graphics.drawCenteredString(this.font, "Glow", this.actionButtonX + 28, this.actionButtonY + 4, 0xFFFFFFFF);
+        graphics.fill(this.actionButtonX + 62, this.actionButtonY, this.actionButtonX + 118, this.actionButtonY + 16, 0xFF3F4F2D);
+        graphics.drawCenteredString(this.font, "Track", this.actionButtonX + 90, this.actionButtonY + 4, 0xFFFFFFFF);
     }
 
     private int drawLine(GuiGraphics graphics, String label, String value, int left, int right, int y) {
@@ -226,18 +229,13 @@ public class TradeDatabaseScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        int panelWidth = Math.min(520, this.width - 24);
-        int panelHeight = Math.min(260, this.height - 20);
-        int left = (this.width - panelWidth) / 2 + 282;
-        int top = (this.height - panelHeight) / 2 + 58;
-        int buttonY = Math.min((this.height - panelHeight) / 2 + panelHeight - 28, top + 122);
         if (!this.visibleEntries.isEmpty()) {
             TradeListS2CPayload.Entry entry = this.visibleEntries.get(Math.min(this.selectedIndex, this.visibleEntries.size() - 1));
-            if (event.x() >= left && event.x() <= left + 56 && event.y() >= buttonY && event.y() <= buttonY + 16) {
+            if (event.x() >= this.actionButtonX && event.x() <= this.actionButtonX + 56 && event.y() >= this.actionButtonY && event.y() <= this.actionButtonY + 16) {
                 ClientPlayNetworking.send(new GlowVillagerC2SPayload(entry.uuid()));
                 return true;
             }
-            if (event.x() >= left + 62 && event.x() <= left + 118 && event.y() >= buttonY && event.y() <= buttonY + 16) {
+            if (event.x() >= this.actionButtonX + 62 && event.x() <= this.actionButtonX + 118 && event.y() >= this.actionButtonY && event.y() <= this.actionButtonY + 16) {
                 this.trackedEntry = entry;
                 return true;
             }

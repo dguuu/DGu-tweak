@@ -20,9 +20,12 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.core.component.DataComponents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -187,11 +190,13 @@ public class DGuTweak implements ModInitializer {
         for (ServerLevel level : player.level().getServer().getAllLevels()) {
             Entity entity = level.getEntity(uuid);
             if (entity instanceof Villager villager) {
+                villager.setGlowingTag(true);
                 villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
                 player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
                 return;
             }
             if (entity instanceof WanderingTrader trader) {
+                trader.setGlowingTag(true);
                 trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
                 player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
                 return;
@@ -216,7 +221,25 @@ public class DGuTweak implements ModInitializer {
     }
 
     private static String stackName(ItemStack stack) {
-        return stack.getHoverName().getString();
+        String name = stack.getHoverName().getString();
+        String enchantments = enchantmentText(stack);
+        return enchantments.isEmpty() ? name : name + ": " + enchantments;
+    }
+
+    private static String enchantmentText(ItemStack stack) {
+        ItemEnchantments enchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
+        if (enchantments == null || enchantments.isEmpty()) {
+            enchantments = stack.getEnchantments();
+        }
+        if (enchantments == null || enchantments.isEmpty()) {
+            return "";
+        }
+
+        List<String> lines = new ArrayList<>();
+        for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<net.minecraft.core.Holder<Enchantment>> entry : enchantments.entrySet()) {
+            lines.add(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).getString());
+        }
+        return String.join(", ", lines);
     }
 
     private static MerchantOffers getVisibleTradersLockedOffers(Villager villager) {
