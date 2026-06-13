@@ -200,8 +200,8 @@ public class DGuTweak implements ModInitializer {
             if (entity instanceof Villager villager) {
                 updateRecordedPosition(villager);
                 if (glow) {
-                    villager.setGlowingTag(true);
-                    villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                    villager.setGlowingTag(false);
+                    villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, true));
                     player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
                 } else {
                     player.sendSystemMessage(Component.literal("[DGu-tweak] Updated villager position."));
@@ -212,8 +212,8 @@ public class DGuTweak implements ModInitializer {
             if (entity instanceof WanderingTrader trader) {
                 updateRecordedPosition(trader);
                 if (glow) {
-                    trader.setGlowingTag(true);
-                    trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, false));
+                    trader.setGlowingTag(false);
+                    trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, true));
                     player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
                 } else {
                     player.sendSystemMessage(Component.literal("[DGu-tweak] Updated wandering trader position."));
@@ -245,7 +245,7 @@ public class DGuTweak implements ModInitializer {
         if (!isValidOffer(first) || !isValidOffer(second)) {
             return false;
         }
-        return stackName(first.getResult()).equals(stackName(second.getResult()))
+        return ItemStack.isSameItem(first.getResult(), second.getResult())
                 && first.getResult().getCount() == second.getResult().getCount();
     }
 

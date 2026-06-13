@@ -41,7 +41,10 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                 .size(40, 14)
                 .build());
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> DGuTweakClient.requestTradeList())
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> {
+                    this.onClose();
+                    DGuTweakClient.requestTradeList();
+                })
                 .pos(buttonX + 82, buttonY)
                 .size(40, 14)
                 .build());

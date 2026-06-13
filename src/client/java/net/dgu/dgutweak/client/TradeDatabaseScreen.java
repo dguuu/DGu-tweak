@@ -39,7 +39,7 @@ public class TradeDatabaseScreen extends Screen {
 
     private static final Map<String, Integer> MAX_ENCHANT_LEVELS = loadMaxEnchantLevels();
 
-    private final List<TradeListS2CPayload.Entry> allEntries;
+    private final List<TradeListS2CPayload.Entry> allEntries = new ArrayList<>();
     private List<String> professions = List.of();
     private List<TradeListS2CPayload.Entry> visibleEntries = List.of();
     private EditBox searchBox;
@@ -54,14 +54,25 @@ public class TradeDatabaseScreen extends Screen {
 
     public TradeDatabaseScreen(List<TradeListS2CPayload.Entry> entries) {
         super(Component.translatable("gui.dgutweak.trades.title"));
-        this.allEntries = new ArrayList<>(entries);
+        replaceEntries(entries);
+    }
+
+    public void replaceEntries(List<TradeListS2CPayload.Entry> entries) {
+        String profession = this.selectedProfession;
+        String selectedTradeKey = this.visibleEntries.isEmpty() ? "" : tradeKey(selectedEntry());
+        this.allEntries.clear();
+        this.allEntries.addAll(entries);
         this.allEntries.sort(Comparator
                 .comparing(TradeListS2CPayload.Entry::profession)
                 .thenComparing(TradeListS2CPayload.Entry::resultName)
                 .thenComparingInt(TradeDatabaseScreen::effectivePrice)
                 .thenComparingDouble(entry -> entry.distance() < 0 ? Double.MAX_VALUE : entry.distance()));
         rebuildProfessions();
+        if (!profession.isBlank() && this.professions.contains(profession)) {
+            this.selectedProfession = profession;
+        }
         rebuildVisibleEntries();
+        restoreSelectedTrade(selectedTradeKey);
     }
 
     @Override
@@ -254,6 +265,24 @@ public class TradeDatabaseScreen extends Screen {
         this.tradeScroll = Math.min(this.tradeScroll, Math.max(0, this.visibleEntries.size() - tradeRows()));
     }
 
+    private void restoreSelectedTrade(String selectedTradeKey) {
+        if (selectedTradeKey.isBlank()) {
+            return;
+        }
+        for (int index = 0; index < this.visibleEntries.size(); index++) {
+            if (tradeKey(this.visibleEntries.get(index)).equals(selectedTradeKey)) {
+                this.selectedTradeIndex = index;
+                int rows = tradeRows();
+                if (this.selectedTradeIndex < this.tradeScroll) {
+                    this.tradeScroll = this.selectedTradeIndex;
+                } else if (this.selectedTradeIndex >= this.tradeScroll + rows) {
+                    this.tradeScroll = Math.max(0, this.selectedTradeIndex - rows + 1);
+                }
+                return;
+            }
+        }
+    }
+
     private void drawProfessionList(GuiGraphics graphics, int left, int top, int right, int bottom, int mouseX, int mouseY) {
         graphics.drawString(this.font, "Profession", left, top - 12, ACCENT);
         if (this.professions.isEmpty()) {
@@ -387,6 +416,10 @@ public class TradeDatabaseScreen extends Screen {
     private static String searchable(TradeListS2CPayload.Entry entry) {
         return (entry.resultName() + " " + entry.costAName() + " " + entry.costBName() + " " + entry.profession() + " " + posText(entry))
                 .toLowerCase(Locale.ROOT);
+    }
+
+    private static String tradeKey(TradeListS2CPayload.Entry entry) {
+        return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount() + "|" + entry.baseCostA() + "|" + entry.costB();
     }
 
     private static int compareValue(TradeListS2CPayload.Entry first, TradeListS2CPayload.Entry second) {
