@@ -53,7 +53,8 @@ public class TradeDatabaseScreen extends Screen {
     private int actionButtonY;
 
     public TradeDatabaseScreen(List<TradeListS2CPayload.Entry> entries) {
-        super(Component.translatable("gui.dgutweak.trades.title"));
+        super(Component.literal(t("title")));
+        DGuTweakClientConfig.load();
         replaceEntries(entries);
     }
 
@@ -79,21 +80,22 @@ public class TradeDatabaseScreen extends Screen {
     protected void init() {
         int panelWidth = Math.min(650, this.width - 24);
         int left = (this.width - panelWidth) / 2;
-        this.searchBox = new EditBox(this.font, left + 10, 34, panelWidth - 190, 18, Component.translatable("gui.dgutweak.trades.search"));
+        DGuTweakClientConfig.load();
+        this.searchBox = new EditBox(this.font, left + 10, 34, panelWidth - 190, 18, Component.literal(t("search")));
         this.addRenderableWidget(this.searchBox);
-        this.addRenderableWidget(Button.builder(Component.literal(this.bestOnly ? "Best" : "All"), button -> {
+        this.addRenderableWidget(Button.builder(Component.literal(this.bestOnly ? t("best") : t("all")), button -> {
                     this.bestOnly = !this.bestOnly;
-                    button.setMessage(Component.literal(this.bestOnly ? "Best" : "All"));
+                    button.setMessage(Component.literal(this.bestOnly ? t("best") : t("all")));
                     rebuildVisibleEntries();
                 })
                 .pos(left + panelWidth - 174, 34)
                 .size(48, 18)
                 .build());
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.refresh"), button -> DGuTweakClient.requestTradeList())
+        this.addRenderableWidget(Button.builder(Component.literal(t("refresh")), button -> DGuTweakClient.requestTradeList())
                 .pos(left + panelWidth - 122, 34)
                 .size(56, 18)
                 .build());
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.close"), button -> Minecraft.getInstance().setScreen(null))
+        this.addRenderableWidget(Button.builder(Component.literal(t("close")), button -> Minecraft.getInstance().setScreen(null))
                 .pos(left + panelWidth - 62, 34)
                 .size(52, 18)
                 .build());
@@ -127,7 +129,7 @@ public class TradeDatabaseScreen extends Screen {
         drawDetails(graphics, detailsLeft, contentTop, detailsRight, contentBottom);
 
         if (this.trackedEntry != null) {
-            String text = "Tracking " + this.trackedEntry.profession() + " @ " + posText(this.trackedEntry);
+            String text = t("tracking") + " " + this.trackedEntry.profession() + " @ " + posText(this.trackedEntry);
             graphics.drawCenteredString(this.font, text, this.width / 2, this.height - 14, ACCENT);
         }
     }
@@ -284,9 +286,9 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private void drawProfessionList(GuiGraphics graphics, int left, int top, int right, int bottom, int mouseX, int mouseY) {
-        graphics.drawString(this.font, "Profession", left, top - 12, ACCENT);
+        graphics.drawString(this.font, t("profession"), left, top - 12, ACCENT);
         if (this.professions.isEmpty()) {
-            graphics.drawString(this.font, "No records", left, top, MUTED);
+            graphics.drawString(this.font, t("no_records"), left, top, MUTED);
             return;
         }
         int rows = Math.min(professionRows(), this.professions.size() - this.professionScroll);
@@ -304,9 +306,9 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private void drawTradeList(GuiGraphics graphics, int left, int top, int right, int bottom, int mouseX, int mouseY) {
-        graphics.drawString(this.font, this.bestOnly ? "Best trades" : "All trades", left, top - 12, ACCENT);
+        graphics.drawString(this.font, this.bestOnly ? t("best_trades") : t("all_trades"), left, top - 12, ACCENT);
         if (this.visibleEntries.isEmpty()) {
-            graphics.drawString(this.font, "No trades for this filter", left, top, MUTED);
+            graphics.drawString(this.font, t("no_trades"), left, top, MUTED);
             return;
         }
         int rows = Math.min(tradeRows(), this.visibleEntries.size() - this.tradeScroll);
@@ -332,18 +334,18 @@ public class TradeDatabaseScreen extends Screen {
         int y = top;
         graphics.drawString(this.font, trim(entry.resultCount() + "x " + entry.resultName(), right - left), left, y, 0xFFFFFFFF);
         y += 14;
-        y = drawLine(graphics, "Price", costText(entry) + (entry.live() ? " (live)" : " (recorded)"), left, right, y);
-        y = drawLine(graphics, "Villager", entry.profession() + " L" + entry.level(), left, right, y);
-        y = drawLine(graphics, "Position", posText(entry), left, right, y);
-        y = drawLine(graphics, "Distance", distanceText(entry), left, right, y);
-        y = drawLine(graphics, "Status", entry.locked() ? "Locked trade" : (entry.live() ? "Loaded" : "Not loaded"), left, right, y);
+        y = drawLine(graphics, t("price"), costText(entry) + (entry.live() ? " (" + t("live") + ")" : " (" + t("recorded") + ")"), left, right, y);
+        y = drawLine(graphics, t("villager"), entry.profession() + " L" + entry.level(), left, right, y);
+        y = drawLine(graphics, t("position"), posText(entry), left, right, y);
+        y = drawLine(graphics, t("distance"), distanceText(entry), left, right, y);
+        y = drawLine(graphics, t("status"), entry.locked() ? t("locked_trade") : (entry.live() ? t("loaded") : t("not_loaded")), left, right, y);
 
         this.actionButtonX = left;
         this.actionButtonY = Math.min(bottom - 18, y + 8);
         graphics.fill(this.actionButtonX, this.actionButtonY, this.actionButtonX + 56, this.actionButtonY + 16, 0xFF2D4F66);
-        graphics.drawCenteredString(this.font, "Glow", this.actionButtonX + 28, this.actionButtonY + 4, 0xFFFFFFFF);
+        graphics.drawCenteredString(this.font, t("glow"), this.actionButtonX + 28, this.actionButtonY + 4, 0xFFFFFFFF);
         graphics.fill(this.actionButtonX + 62, this.actionButtonY, this.actionButtonX + 118, this.actionButtonY + 16, 0xFF3F4F2D);
-        graphics.drawCenteredString(this.font, "Track", this.actionButtonX + 90, this.actionButtonY + 4, 0xFFFFFFFF);
+        graphics.drawCenteredString(this.font, t("track"), this.actionButtonX + 90, this.actionButtonY + 4, 0xFFFFFFFF);
     }
 
     private int drawLine(GuiGraphics graphics, String label, String value, int left, int right, int y) {
@@ -443,7 +445,7 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String distanceText(TradeListS2CPayload.Entry entry) {
-        return entry.distance() < 0 ? "other dimension" : String.format(Locale.ROOT, "%.0fm", entry.distance());
+        return entry.distance() < 0 ? t("other_dimension") : String.format(Locale.ROOT, "%.0fm", entry.distance());
     }
 
     private static String posText(TradeListS2CPayload.Entry entry) {
@@ -459,6 +461,10 @@ public class TradeDatabaseScreen extends Screen {
         graphics.fill(left, top + height - 1, left + width, top + height, BORDER);
         graphics.fill(left, top, left + 1, top + height, BORDER);
         graphics.fill(left + width - 1, top, left + width, top + height, BORDER);
+    }
+
+    private static String t(String key) {
+        return DGuTweakClientConfig.text(key);
     }
 
     private static Map<String, Integer> loadMaxEnchantLevels() {

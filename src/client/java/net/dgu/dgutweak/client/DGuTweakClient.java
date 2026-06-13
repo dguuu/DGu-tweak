@@ -6,7 +6,6 @@ import net.dgu.dgutweak.networking.TradeListS2CPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -14,6 +13,7 @@ public class DGuTweakClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         DGuTweak.LOGGER.info("Initializing client");
+        DGuTweakClientConfig.load();
         ClientPlayNetworking.registerGlobalReceiver(TradeListS2CPayload.PACKET_ID, (payload, context) ->
                 context.client().execute(() -> {
                     Minecraft client = Minecraft.getInstance();
