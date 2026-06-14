@@ -588,7 +588,7 @@ public class TradeDatabaseScreen extends Screen {
         Map<String, Integer> levels = new HashMap<>();
         addMaxLevel(levels, 4, "保護", "保护", "Protection");
         addMaxLevel(levels, 4, "火焰保護", "火焰保护", "Fire Protection");
-        addMaxLevel(levels, 4, "摔落緩衝", "摔落缓冲", "Feather Falling");
+        addMaxLevel(levels, 4, "輕盈", "轻盈", "摔落緩衝", "摔落缓冲", "Feather Falling");
         addMaxLevel(levels, 4, "爆炸保護", "爆炸保护", "Blast Protection");
         addMaxLevel(levels, 4, "投射物保護", "弹射物保护", "Projectile Protection");
         addMaxLevel(levels, 3, "水中呼吸", "Respiration");
@@ -620,12 +620,12 @@ public class TradeDatabaseScreen extends Screen {
         addMaxLevel(levels, 5, "魚叉", "穿刺", "Impaling");
         addMaxLevel(levels, 3, "忠誠", "忠诚", "Loyalty");
         addMaxLevel(levels, 3, "波濤", "激流", "Riptide");
-        addMaxLevel(levels, 3, "快速裝填", "快速装填", "Quick Charge");
-        addMaxLevel(levels, 4, "穿透", "Piercing");
-        addMaxLevel(levels, 1, "多重射擊", "多重射击", "Multishot");
+        addMaxLevel(levels, 3, "快速上弦", "快速裝填", "快速装填", "Quick Charge");
+        addMaxLevel(levels, 4, "貫穿", "穿透", "Piercing");
+        addMaxLevel(levels, 1, "分裂箭矢", "多重射擊", "多重射击", "Multishot");
         addMaxLevel(levels, 3, "靈魂疾走", "灵魂疾行", "Soul Speed");
         addMaxLevel(levels, 3, "迅捷潛行", "迅捷潜行", "Swift Sneak");
-        addMaxLevel(levels, 5, "密度", "Density");
+        addMaxLevel(levels, 5, "緻密", "致密", "密度", "Density");
         addMaxLevel(levels, 4, "破甲", "Breach");
         addMaxLevel(levels, 3, "風爆", "风爆", "Wind Burst");
         return levels;
