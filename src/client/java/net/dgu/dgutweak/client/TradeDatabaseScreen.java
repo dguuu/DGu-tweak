@@ -409,7 +409,7 @@ public class TradeDatabaseScreen extends Screen {
         if (enchant == null) {
             return true;
         }
-        Integer maxLevel = MAX_ENCHANT_LEVELS.get(enchant.name().toLowerCase(Locale.ROOT));
+        Integer maxLevel = MAX_ENCHANT_LEVELS.get(normalizeEnchantName(enchant.name()));
         return maxLevel == null || enchant.level() >= maxLevel;
     }
 
@@ -557,7 +557,7 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static Map<String, Integer> loadMaxEnchantLevels() {
-        Map<String, Integer> levels = new HashMap<>();
+        Map<String, Integer> levels = defaultMaxEnchantLevels();
         List<Resource> resources = Minecraft.getInstance().getResourceManager().getResourceStack(TRADE_CSV);
         if (resources.isEmpty()) {
             return levels;
@@ -574,14 +574,76 @@ public class TradeDatabaseScreen extends Screen {
                     continue;
                 }
                 for (String name : columns.get(0).split(",")) {
-                    levels.put(name.trim().toLowerCase(Locale.ROOT), maxLevel);
+                    levels.putIfAbsent(normalizeEnchantName(name), maxLevel);
                 }
-                levels.put(columns.get(1).trim().toLowerCase(Locale.ROOT), maxLevel);
+                levels.putIfAbsent(normalizeEnchantName(columns.get(1)), maxLevel);
             }
         } catch (IOException exception) {
             DGuTweak.LOGGER.warn("Failed to load enchantment max levels", exception);
         }
         return levels;
+    }
+
+    private static Map<String, Integer> defaultMaxEnchantLevels() {
+        Map<String, Integer> levels = new HashMap<>();
+        addMaxLevel(levels, 4, "保護", "保护", "Protection");
+        addMaxLevel(levels, 4, "火焰保護", "火焰保护", "Fire Protection");
+        addMaxLevel(levels, 4, "摔落緩衝", "摔落缓冲", "Feather Falling");
+        addMaxLevel(levels, 4, "爆炸保護", "爆炸保护", "Blast Protection");
+        addMaxLevel(levels, 4, "投射物保護", "弹射物保护", "Projectile Protection");
+        addMaxLevel(levels, 3, "水中呼吸", "Respiration");
+        addMaxLevel(levels, 1, "親水性", "水下速掘", "Aqua Affinity");
+        addMaxLevel(levels, 3, "尖刺", "荆棘", "Thorns");
+        addMaxLevel(levels, 3, "深海漫遊", "深海探索者", "Depth Strider");
+        addMaxLevel(levels, 2, "冰霜行者", "Frost Walker");
+        addMaxLevel(levels, 1, "綁定詛咒", "绑定诅咒", "Curse of Binding");
+        addMaxLevel(levels, 5, "鋒利", "锋利", "Sharpness");
+        addMaxLevel(levels, 5, "不死剋星", "不死克星", "不死剋手", "不死克手", "Smite");
+        addMaxLevel(levels, 5, "節肢剋星", "节肢杀手", "節肢剋手", "节肢克手", "Bane of Arthropods");
+        addMaxLevel(levels, 2, "擊退", "击退", "Knockback");
+        addMaxLevel(levels, 2, "燃燒", "火焰附加", "Fire Aspect");
+        addMaxLevel(levels, 3, "掠奪", "抢夺", "Looting");
+        addMaxLevel(levels, 3, "橫掃之刃", "横扫之刃", "Sweeping Edge");
+        addMaxLevel(levels, 5, "強力", "力量", "Power");
+        addMaxLevel(levels, 2, "衝擊", "冲击", "Punch");
+        addMaxLevel(levels, 1, "火焰", "Flame");
+        addMaxLevel(levels, 1, "無限", "无限", "Infinity");
+        addMaxLevel(levels, 5, "效率", "Efficiency");
+        addMaxLevel(levels, 1, "絲綢之觸", "精准采集", "Silk Touch");
+        addMaxLevel(levels, 3, "幸運", "时运", "Fortune");
+        addMaxLevel(levels, 3, "海洋的祝福", "海之眷顾", "Luck of the Sea");
+        addMaxLevel(levels, 3, "魚餌", "饵钓", "Lure");
+        addMaxLevel(levels, 3, "耐久", "Unbreaking");
+        addMaxLevel(levels, 1, "修補", "经验修补", "Mending");
+        addMaxLevel(levels, 1, "消失詛咒", "消失诅咒", "Curse of Vanishing");
+        addMaxLevel(levels, 1, "喚雷", "引雷", "Channeling");
+        addMaxLevel(levels, 5, "魚叉", "穿刺", "Impaling");
+        addMaxLevel(levels, 3, "忠誠", "忠诚", "Loyalty");
+        addMaxLevel(levels, 3, "波濤", "激流", "Riptide");
+        addMaxLevel(levels, 3, "快速裝填", "快速装填", "Quick Charge");
+        addMaxLevel(levels, 4, "穿透", "Piercing");
+        addMaxLevel(levels, 1, "多重射擊", "多重射击", "Multishot");
+        addMaxLevel(levels, 3, "靈魂疾走", "灵魂疾行", "Soul Speed");
+        addMaxLevel(levels, 3, "迅捷潛行", "迅捷潜行", "Swift Sneak");
+        addMaxLevel(levels, 5, "密度", "Density");
+        addMaxLevel(levels, 4, "破甲", "Breach");
+        addMaxLevel(levels, 3, "風爆", "风爆", "Wind Burst");
+        return levels;
+    }
+
+    private static void addMaxLevel(Map<String, Integer> levels, int maxLevel, String... names) {
+        for (String name : names) {
+            levels.put(normalizeEnchantName(name), maxLevel);
+        }
+    }
+
+    private static String normalizeEnchantName(String name) {
+        return name.trim()
+                .toLowerCase(Locale.ROOT)
+                .replace(" ", "")
+                .replace("_", "")
+                .replace("-", "")
+                .replace("　", "");
     }
 
     private static List<String> parseCsvLine(String line) {
@@ -604,7 +666,12 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static int romanToInt(String roman) {
-        return switch (roman.trim().toUpperCase(Locale.ROOT)) {
+        String value = roman.trim().toUpperCase(Locale.ROOT);
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+        }
+        return switch (value) {
             case "I" -> 1;
             case "II" -> 2;
             case "III" -> 3;
