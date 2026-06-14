@@ -42,6 +42,7 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> {
+                    findNearestVillagerUuid(uuid -> DGuTweakClient.rememberMerchantOffers(uuid, this.menu.getOffers()));
                     this.onClose();
                     DGuTweakClient.requestTradeList();
                 })

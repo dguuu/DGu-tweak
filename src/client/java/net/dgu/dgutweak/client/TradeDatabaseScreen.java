@@ -64,7 +64,7 @@ public class TradeDatabaseScreen extends Screen {
         String profession = this.selectedProfession;
         String selectedTradeKey = this.visibleEntries.isEmpty() ? "" : tradeKey(selectedEntry());
         this.allEntries.clear();
-        this.allEntries.addAll(entries);
+        this.allEntries.addAll(DGuTweakClient.applyRememberedMerchantPrices(entries));
         this.allEntries.sort(Comparator
                 .comparing(TradeListS2CPayload.Entry::profession)
                 .thenComparing(TradeListS2CPayload.Entry::resultName)
