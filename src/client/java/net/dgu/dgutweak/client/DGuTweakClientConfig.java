@@ -136,7 +136,10 @@ public final class DGuTweakClientConfig {
 
     private static Map<String, String> loadVanillaTranslations(String language) {
         Map<String, String> translations = new HashMap<>();
-        Identifier id = Identifier.fromNamespaceAndPath("minecraft", "lang/" + language + ".json");
+        Identifier id = Identifier.tryParse("minecraft:lang/" + language + ".json");
+        if (id == null) {
+            return Map.of();
+        }
         List<Resource> resources = Minecraft.getInstance().getResourceManager().getResourceStack(id);
         for (Resource resource : resources) {
             try (Reader reader = resource.openAsReader()) {

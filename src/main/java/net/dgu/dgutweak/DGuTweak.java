@@ -134,7 +134,11 @@ public class DGuTweak implements ModInitializer {
     }
 
     public static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(MOD_ID, path);
+        Identifier id = Identifier.tryParse(MOD_ID + ":" + path);
+        if (id == null) {
+            throw new IllegalArgumentException("Invalid DGu Tweak identifier path: " + path);
+        }
+        return id;
     }
 
     public static void sendTradeList(ServerPlayer player) {
