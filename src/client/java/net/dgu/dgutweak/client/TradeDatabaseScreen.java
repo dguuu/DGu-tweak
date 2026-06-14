@@ -2,6 +2,7 @@ package net.dgu.dgutweak.client;
 
 import net.dgu.dgutweak.DGuTweak;
 import net.dgu.dgutweak.networking.GlowVillagerC2SPayload;
+import net.dgu.dgutweak.networking.RequestTradeListC2SPayload;
 import net.dgu.dgutweak.networking.TradeListS2CPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -51,6 +52,7 @@ public class TradeDatabaseScreen extends Screen {
     private TradeListS2CPayload.Entry trackedEntry;
     private int actionButtonX;
     private int actionButtonY;
+    private int refreshTicks;
 
     public TradeDatabaseScreen(List<TradeListS2CPayload.Entry> entries) {
         super(Component.literal(t("title")));
@@ -103,6 +105,16 @@ public class TradeDatabaseScreen extends Screen {
                 .pos(left + panelWidth - 62, 34)
                 .size(52, 18)
                 .build());
+        requestLiveRefresh();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (++this.refreshTicks >= 20) {
+            this.refreshTicks = 0;
+            requestLiveRefresh();
+        }
     }
 
     @Override
@@ -515,6 +527,13 @@ public class TradeDatabaseScreen extends Screen {
 
     private static String t(String key) {
         return DGuTweakClientConfig.text(key);
+    }
+
+    private static void requestLiveRefresh() {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player != null) {
+            ClientPlayNetworking.send(new RequestTradeListC2SPayload());
+        }
     }
 
     private static Map<String, Integer> loadMaxEnchantLevels() {
