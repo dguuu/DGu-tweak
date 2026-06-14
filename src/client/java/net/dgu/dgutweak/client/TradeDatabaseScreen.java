@@ -421,7 +421,7 @@ public class TradeDatabaseScreen extends Screen {
         String firstEnchant = resultName.substring(separator + 2).split(",")[0].trim();
         int lastSpace = firstEnchant.lastIndexOf(' ');
         if (lastSpace < 0) {
-            return null;
+            return firstEnchant.isBlank() ? null : new EnchantMatch(firstEnchant, 1);
         }
         int level = romanToInt(firstEnchant.substring(lastSpace + 1));
         if (level <= 0) {
@@ -446,6 +446,14 @@ public class TradeDatabaseScreen extends Screen {
         if (isEnchantedItem(entry) && !isEnchantedBook(entry)) {
             return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount()
                     + "|" + entry.baseCostA() + "|" + entry.costB() + "|" + entry.distance();
+        }
+        if (isEnchantedBook(entry)) {
+            EnchantMatch enchant = findEnchantMatch(entry.resultName());
+            if (enchant != null) {
+                return ENCHANTED_BOOK_KEY + "|" + normalizeEnchantName(enchant.name()) + "|" + entry.resultCount()
+                        + "|" + stackGroupKey(entry.costAName(), entry.costATranslationKey())
+                        + "|" + stackGroupKey(entry.costBName(), entry.costBTranslationKey());
+            }
         }
         return stackGroupKey(entry.resultName(), entry.resultTranslationKey()) + "|" + entry.resultCount()
                 + "|" + stackGroupKey(entry.costAName(), entry.costATranslationKey())
