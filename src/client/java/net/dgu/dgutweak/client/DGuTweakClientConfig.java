@@ -187,6 +187,7 @@ public final class DGuTweakClientConfig {
         zhTw.put("recorded", "\u8a18\u9304");
         zhTw.put("current_price", "\u76ee\u524d");
         zhTw.put("recorded_price", "\u8a18\u9304");
+        zhTw.put("category.enchanted_items", "\u9644\u9b54\u7269\u54c1");
         zhTw.put("profession.armorer", "\u88fd\u7532\u5e2b");
         zhTw.put("profession.butcher", "\u5c60\u592b");
         zhTw.put("profession.cartographer", "\u88fd\u5716\u5e2b");
@@ -233,6 +234,7 @@ public final class DGuTweakClientConfig {
         enUs.put("recorded", "recorded");
         enUs.put("current_price", "current");
         enUs.put("recorded_price", "recorded");
+        enUs.put("category.enchanted_items", "enchanted items");
         enUs.put("profession.armorer", "armorer");
         enUs.put("profession.butcher", "butcher");
         enUs.put("profession.cartographer", "cartographer");

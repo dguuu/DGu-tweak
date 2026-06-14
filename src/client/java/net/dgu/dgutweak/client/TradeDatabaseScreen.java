@@ -37,6 +37,8 @@ public class TradeDatabaseScreen extends Screen {
     private static final int TEXT = 0xFFE8E8E8;
     private static final int MUTED = 0xFFAAAAAA;
     private static final int ACCENT = 0xFF7DD3FC;
+    private static final String ENCHANTED_ITEMS_CATEGORY = "__enchanted_items";
+    private static final String ENCHANTED_BOOK_KEY = "item.minecraft.enchanted_book";
 
     private static final Map<String, Integer> MAX_ENCHANT_LEVELS = loadMaxEnchantLevels();
 
@@ -246,11 +248,11 @@ public class TradeDatabaseScreen extends Screen {
 
     private void rebuildProfessions() {
         this.professions = this.allEntries.stream()
-                .map(TradeListS2CPayload.Entry::profession)
+                .map(TradeDatabaseScreen::categoryKey)
                 .distinct()
                 .sorted()
                 .toList();
-        if (this.selectedProfession.isBlank() && !this.professions.isEmpty()) {
+        if ((this.selectedProfession.isBlank() || !this.professions.contains(this.selectedProfession)) && !this.professions.isEmpty()) {
             this.selectedProfession = this.professions.get(0);
         }
     }
@@ -258,7 +260,7 @@ public class TradeDatabaseScreen extends Screen {
     private void rebuildVisibleEntries() {
         String query = this.searchBox == null ? "" : this.searchBox.getValue().trim().toLowerCase(Locale.ROOT);
         List<TradeListS2CPayload.Entry> matches = this.allEntries.stream()
-                .filter(entry -> entry.profession().equals(this.selectedProfession))
+                .filter(entry -> categoryKey(entry).equals(this.selectedProfession))
                 .filter(entry -> query.isBlank() || searchable(entry).contains(query))
                 .toList();
 
@@ -290,12 +292,6 @@ public class TradeDatabaseScreen extends Screen {
         for (int index = 0; index < this.visibleEntries.size(); index++) {
             if (tradeKey(this.visibleEntries.get(index)).equals(selectedTradeKey)) {
                 this.selectedTradeIndex = index;
-                int rows = tradeRows();
-                if (this.selectedTradeIndex < this.tradeScroll) {
-                    this.tradeScroll = this.selectedTradeIndex;
-                } else if (this.selectedTradeIndex >= this.tradeScroll + rows) {
-                    this.tradeScroll = Math.max(0, this.selectedTradeIndex - rows + 1);
-                }
                 return;
             }
         }
@@ -391,7 +387,7 @@ public class TradeDatabaseScreen extends Screen {
     private int countProfession(String profession) {
         int count = 0;
         for (TradeListS2CPayload.Entry entry : this.allEntries) {
-            if (entry.profession().equals(profession)) {
+            if (categoryKey(entry).equals(profession)) {
                 count++;
             }
         }
@@ -406,6 +402,9 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static boolean isBestEligible(TradeListS2CPayload.Entry entry) {
+        if (!isEnchantedBook(entry)) {
+            return true;
+        }
         EnchantMatch enchant = findEnchantMatch(entry.resultName());
         if (enchant == null) {
             return true;
@@ -444,6 +443,10 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String bestGroupKey(TradeListS2CPayload.Entry entry) {
+        if (isEnchantedItem(entry) && !isEnchantedBook(entry)) {
+            return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount()
+                    + "|" + entry.baseCostA() + "|" + entry.costB() + "|" + entry.distance();
+        }
         return stackGroupKey(entry.resultName(), entry.resultTranslationKey()) + "|" + entry.resultCount()
                 + "|" + stackGroupKey(entry.costAName(), entry.costATranslationKey())
                 + "|" + stackGroupKey(entry.costBName(), entry.costBTranslationKey());
@@ -499,7 +502,24 @@ public class TradeDatabaseScreen extends Screen {
     }
 
     private static String professionName(String profession) {
+        if (profession.equals(ENCHANTED_ITEMS_CATEGORY)) {
+            return t("category.enchanted_items");
+        }
         return t("profession." + profession);
+    }
+
+    private static String categoryKey(TradeListS2CPayload.Entry entry) {
+        return isEnchantedItem(entry) && !isEnchantedBook(entry)
+                ? ENCHANTED_ITEMS_CATEGORY
+                : entry.profession();
+    }
+
+    private static boolean isEnchantedItem(TradeListS2CPayload.Entry entry) {
+        return findEnchantMatch(entry.resultName()) != null;
+    }
+
+    private static boolean isEnchantedBook(TradeListS2CPayload.Entry entry) {
+        return ENCHANTED_BOOK_KEY.equals(entry.resultTranslationKey());
     }
 
     private static String stackGroupKey(String fallbackName, String translationKey) {
