@@ -5,6 +5,8 @@
   "gui.dgutweak.auto_filter.settings": "设置",
   "gui.dgutweak.auto_filter.settings.title": "村民交易自动筛选设置",
   "gui.dgutweak.auto_filter.enchantment": "附魔 ID",
+  "gui.dgutweak.auto_filter.item": "目标物品",
+  "gui.dgutweak.auto_filter.none": "未设置",
   "gui.dgutweak.auto_filter.level": "等级",
   "gui.dgutweak.auto_filter.price": "原价 <",
   "gui.dgutweak.auto_filter.save": "保存",
@@ -15,6 +17,7 @@
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自动筛选器。",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易界面已关闭，已停止自动筛选。",
   "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] 请先打开尚未交易过的村民交易界面。",
+  "message.dgutweak.auto_filter.no_profession_targets": "[DGu-tweak] 尚未设置这个职业的筛选条件。",
   "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling 无法使用。",
   "message.dgutweak.auto_filter.found": "[DGu-tweak] 刷新 %3$s 次后找到 %1$s，原价 %2$s 个绿宝石。"
 }

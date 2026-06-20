@@ -16,6 +16,8 @@
   "gui.dgutweak.auto_filter.settings": "Filter",
   "gui.dgutweak.auto_filter.settings.title": "Auto Villager Filter",
   "gui.dgutweak.auto_filter.enchantment": "Enchantment ID",
+  "gui.dgutweak.auto_filter.item": "Target item",
+  "gui.dgutweak.auto_filter.none": "Not configured",
   "gui.dgutweak.auto_filter.level": "Level",
   "gui.dgutweak.auto_filter.price": "Base <",
   "gui.dgutweak.auto_filter.save": "Save",
@@ -26,6 +28,7 @@
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] Auto villager filter disabled.",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] Auto villager filter stopped because the trade screen was closed.",
   "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] Open an untraded villager's trade screen first.",
+  "message.dgutweak.auto_filter.no_profession_targets": "[DGu-tweak] No filter is configured for this profession.",
   "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling is unavailable.",
   "message.dgutweak.auto_filter.found": "[DGu-tweak] Found %s for %s emeralds after %s cycles."
 }

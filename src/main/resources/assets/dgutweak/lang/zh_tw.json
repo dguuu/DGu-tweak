@@ -5,6 +5,8 @@
   "gui.dgutweak.auto_filter.settings": "設定",
   "gui.dgutweak.auto_filter.settings.title": "村民交易自動篩選設定",
   "gui.dgutweak.auto_filter.enchantment": "附魔 ID",
+  "gui.dgutweak.auto_filter.item": "目標物品",
+  "gui.dgutweak.auto_filter.none": "未設定",
   "gui.dgutweak.auto_filter.level": "等級",
   "gui.dgutweak.auto_filter.price": "原價 <",
   "gui.dgutweak.auto_filter.save": "儲存",
@@ -15,6 +17,7 @@
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自動篩選器。",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易畫面已關閉，已停止自動篩選。",
   "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] 請先開啟尚未交易過的村民交易畫面。",
+  "message.dgutweak.auto_filter.no_profession_targets": "[DGu-tweak] 尚未設定這個職業的篩選條件。",
   "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling 無法使用。",
   "message.dgutweak.auto_filter.found": "[DGu-tweak] 刷新 %3$s 次後找到 %1$s，原價 %2$s 顆綠寶石。"
 }

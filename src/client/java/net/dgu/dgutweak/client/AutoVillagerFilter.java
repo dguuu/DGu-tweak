@@ -10,6 +10,7 @@ import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -20,10 +21,12 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.entity.npc.villager.Villager;
 import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public final class AutoVillagerFilter {
@@ -31,8 +34,8 @@ public final class AutoVillagerFilter {
     private static final int RESPONSE_TIMEOUT_TICKS = 100;
 
     private static final List<Target> DEFAULT_TARGETS = List.of(
-            new Target(id("minecraft:mending"), 1, 20),
-            new Target(id("minecraft:unbreaking"), 3, 15)
+            new Target("librarian", id("minecraft:enchanted_book"), id("minecraft:mending"), 1, 20),
+            new Target("librarian", id("minecraft:enchanted_book"), id("minecraft:unbreaking"), 3, 15)
     );
     private static List<Target> targets = new ArrayList<>(DEFAULT_TARGETS);
 
@@ -48,6 +51,7 @@ public final class AutoVillagerFilter {
     private static int responseTimeout;
     private static int cycleCount;
     private static Button toggleButton;
+    private static String activeProfession;
 
     private AutoVillagerFilter() {
     }
@@ -97,6 +101,12 @@ public final class AutoVillagerFilter {
             return;
         }
 
+        activeProfession = findNearestProfession(client);
+        if (activeProfession == null || targets.stream().noneMatch(target -> target.profession().equals(activeProfession))) {
+            notifyPlayer(Component.translatable("message.dgutweak.auto_filter.no_profession_targets"));
+            return;
+        }
+
         active = true;
         awaitingResponse = false;
         cycleCount = 0;
@@ -115,9 +125,12 @@ public final class AutoVillagerFilter {
         if (match != null) {
             active = false;
             updateButtonLabel();
+            Component foundName = match.enchantment() == null
+                    ? match.itemName()
+                    : Enchantment.getFullname(match.enchantment(), match.level());
             notifyPlayer(Component.translatable(
                     "message.dgutweak.auto_filter.found",
-                    Enchantment.getFullname(match.enchantment(), match.level()),
+                    foundName,
                     match.price(),
                     cycleCount
             ));
@@ -169,32 +182,48 @@ public final class AutoVillagerFilter {
 
     private static Match findMatch(MerchantOffers offers) {
         for (MerchantOffer offer : offers) {
-            if (offer == null || !offer.getResult().is(Items.ENCHANTED_BOOK)
-                    || !offer.getBaseCostA().is(Items.EMERALD)) {
+            if (offer == null || !offer.getBaseCostA().is(Items.EMERALD)) {
                 continue;
             }
 
             ItemStack result = offer.getResult();
-            ItemEnchantments enchantments = result.get(DataComponents.STORED_ENCHANTMENTS);
-            if (enchantments == null || enchantments.isEmpty()) {
-                continue;
-            }
-
             int price = offer.getBaseCostA().getCount();
-            for (var enchantmentEntry : enchantments.entrySet()) {
-                for (Target target : targets) {
+            Identifier resultId = BuiltInRegistries.ITEM.getKey(result.getItem());
+            for (Target target : targets) {
+                if (!target.profession().equals(activeProfession) || !target.resultItem().equals(resultId)
+                        || price >= target.maxEmeraldPrice()) {
+                    continue;
+                }
+                if (target.enchantmentId() == null) {
+                    return new Match(null, 0, result.getHoverName(), price);
+                }
+                ItemEnchantments enchantments = result.get(DataComponents.STORED_ENCHANTMENTS);
+                if (enchantments == null) {
+                    continue;
+                }
+                for (var enchantmentEntry : enchantments.entrySet()) {
                     boolean sameEnchantment = enchantmentEntry.getKey().unwrapKey()
                             .map(key -> key.identifier().equals(target.enchantmentId()))
                             .orElse(false);
                     if (sameEnchantment
-                            && enchantmentEntry.getIntValue() == target.level()
-                            && price < target.maxEmeraldPrice()) {
-                        return new Match(enchantmentEntry.getKey(), target.level(), price);
+                            && enchantmentEntry.getIntValue() == target.level()) {
+                        return new Match(enchantmentEntry.getKey(), target.level(), Component.empty(), price);
                     }
                 }
             }
         }
         return null;
+    }
+
+    private static String findNearestProfession(Minecraft client) {
+        if (client.player == null || client.level == null) {
+            return null;
+        }
+        return client.level.getEntitiesOfClass(Villager.class, client.player.getBoundingBox().inflate(6.0D)).stream()
+                .min(Comparator.comparingDouble(villager -> villager.distanceToSqr(client.player)))
+                .flatMap(villager -> villager.getVillagerData().profession().unwrapKey())
+                .map(key -> key.identifier().getPath())
+                .orElse(null);
     }
 
     private static void stop(String translationKey) {
@@ -227,9 +256,9 @@ public final class AutoVillagerFilter {
         return identifier;
     }
 
-    public record Target(Identifier enchantmentId, int level, int maxEmeraldPrice) {
+    public record Target(String profession, Identifier resultItem, Identifier enchantmentId, int level, int maxEmeraldPrice) {
     }
 
-    private record Match(net.minecraft.core.Holder<Enchantment> enchantment, int level, int price) {
+    private record Match(net.minecraft.core.Holder<Enchantment> enchantment, int level, Component itemName, int price) {
     }
 }
