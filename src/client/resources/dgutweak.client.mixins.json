@@ -4,6 +4,8 @@
   "package": "net.dgu.dgutweak.client.mixins",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ClientPacketListenerMixin",
+    "KeyboardMixin",
     "MerchantScreenRecordMixin"
   ],
   "injectors": {

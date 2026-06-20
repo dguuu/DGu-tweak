@@ -1,6 +1,7 @@
 package net.dgu.dgutweak.client.mixins;
 
 import net.dgu.dgutweak.client.DGuTweakClient;
+import net.dgu.dgutweak.client.AutoVillagerFilter;
 import net.dgu.dgutweak.networking.RecordVillagerC2SPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -33,12 +34,12 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.record"), button -> sendRecordRequest())
                 .pos(buttonX, buttonY)
-                .size(40, 14)
+                .size(60, 14)
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.query"), button -> sendDetailCommand())
-                .pos(buttonX + 41, buttonY)
-                .size(40, 14)
+                .pos(buttonX + 61, buttonY)
+                .size(61, 14)
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> {
@@ -46,9 +47,18 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                     this.onClose();
                     DGuTweakClient.requestTradeList();
                 })
-                .pos(buttonX + 82, buttonY)
-                .size(40, 14)
+                .pos(buttonX, buttonY + 15)
+                .size(60, 14)
                 .build());
+
+        Button autoFilterButton = Button.builder(
+                        Component.translatable("gui.dgutweak.auto_filter.start"),
+                        button -> AutoVillagerFilter.toggle())
+                .pos(buttonX + 61, buttonY + 15)
+                .size(61, 14)
+                .build();
+        this.addRenderableWidget(autoFilterButton);
+        AutoVillagerFilter.bindButton(autoFilterButton);
     }
 
     private static void sendRecordRequest() {

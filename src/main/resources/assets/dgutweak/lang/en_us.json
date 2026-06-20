@@ -9,5 +9,14 @@
   "gui.dgutweak.guide.title": "Trade Guide",
   "gui.dgutweak.guide.search": "Search",
   "gui.dgutweak.guide.no_results": "No matches",
-  "gui.dgutweak.close": "Close"
+  "gui.dgutweak.close": "Close",
+  "key.dgutweak.auto_filter": "Toggle Auto Villager Filter",
+  "gui.dgutweak.auto_filter.start": "Auto Filter: Start",
+  "gui.dgutweak.auto_filter.stop": "Auto Filter: Stop",
+  "message.dgutweak.auto_filter.enabled": "[DGu-tweak] Auto villager filter enabled.",
+  "message.dgutweak.auto_filter.disabled": "[DGu-tweak] Auto villager filter disabled.",
+  "message.dgutweak.auto_filter.closed": "[DGu-tweak] Auto villager filter stopped because the trade screen was closed.",
+  "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] Open an untraded villager's trade screen first.",
+  "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling is unavailable.",
+  "message.dgutweak.auto_filter.found": "[DGu-tweak] Found %s for %s emeralds after %s cycles."
 }

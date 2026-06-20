@@ -29,6 +29,7 @@
 		"minecraft": ">=1.21.11",
 		"java": ">=21",
 		"fabric-api": "*",
+		"trade_cycling": ">=1.21.11-1.0.20",
 		"visibletraders": "*"
 	}
 }

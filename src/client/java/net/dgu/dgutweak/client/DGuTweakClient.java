@@ -29,6 +29,7 @@ public class DGuTweakClient implements ClientModInitializer {
     public void onInitializeClient() {
         DGuTweak.LOGGER.info("Initializing client");
         DGuTweakClientConfig.load();
+        AutoVillagerFilter.initialize();
         registerClientCommands();
         ClientPlayNetworking.registerGlobalReceiver(TradeListS2CPayload.PACKET_ID, (payload, context) ->
                 context.client().execute(() -> {

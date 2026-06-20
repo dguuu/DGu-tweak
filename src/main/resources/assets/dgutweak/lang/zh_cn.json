@@ -1,0 +1,11 @@
+{
+  "key.dgutweak.auto_filter": "切换村民交易自动筛选器",
+  "gui.dgutweak.auto_filter.start": "自动筛选：开始",
+  "gui.dgutweak.auto_filter.stop": "自动筛选：停止",
+  "message.dgutweak.auto_filter.enabled": "[DGu-tweak] 已启用村民交易自动筛选器。",
+  "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自动筛选器。",
+  "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易界面已关闭，已停止自动筛选。",
+  "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] 请先打开尚未交易过的村民交易界面。",
+  "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling 无法使用。",
+  "message.dgutweak.auto_filter.found": "[DGu-tweak] 刷新 %3$s 次后找到 %1$s，原价 %2$s 个绿宝石。"
+}
