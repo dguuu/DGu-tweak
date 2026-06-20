@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.dgu.dgutweak.client.mixins",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MerchantScreenRecordMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixinextras": {
+    "minVersion": "0.5.0"
+  }
+}
