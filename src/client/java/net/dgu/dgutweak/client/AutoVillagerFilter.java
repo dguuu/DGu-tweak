@@ -23,17 +23,18 @@ import net.minecraft.world.item.trading.MerchantOffers;
 import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class AutoVillagerFilter {
     private static final int CYCLE_DELAY_TICKS = 1;
     private static final int RESPONSE_TIMEOUT_TICKS = 100;
 
-    // TODO: Move these targets to the client config.
-    private static final List<Target> TARGETS = List.of(
+    private static final List<Target> DEFAULT_TARGETS = List.of(
             new Target(id("minecraft:mending"), 1, 20),
             new Target(id("minecraft:unbreaking"), 3, 15)
     );
+    private static List<Target> targets = new ArrayList<>(DEFAULT_TARGETS);
 
     private static final KeyMapping TOGGLE_KEY = new KeyMapping(
             "key.dgutweak.auto_filter",
@@ -52,6 +53,7 @@ public final class AutoVillagerFilter {
     }
 
     public static void initialize() {
+        targets = new ArrayList<>(AutoFilterConfig.load(DEFAULT_TARGETS));
         KeyBindingHelper.registerKeyBinding(TOGGLE_KEY);
         ClientTickEvents.END_CLIENT_TICK.register(AutoVillagerFilter::tick);
     }
@@ -65,6 +67,20 @@ public final class AutoVillagerFilter {
     public static void bindButton(Button button) {
         toggleButton = button;
         updateButtonLabel();
+    }
+
+    public static void openSettings() {
+        Minecraft client = Minecraft.getInstance();
+        client.setScreen(new AutoFilterSettingsScreen(client.screen));
+    }
+
+    public static List<Target> targets() {
+        return List.copyOf(targets);
+    }
+
+    public static void setTargets(List<Target> newTargets) {
+        targets = new ArrayList<>(newTargets);
+        AutoFilterConfig.save(targets);
     }
 
     public static void toggle() {
@@ -166,7 +182,7 @@ public final class AutoVillagerFilter {
 
             int price = offer.getBaseCostA().getCount();
             for (var enchantmentEntry : enchantments.entrySet()) {
-                for (Target target : TARGETS) {
+                for (Target target : targets) {
                     boolean sameEnchantment = enchantmentEntry.getKey().unwrapKey()
                             .map(key -> key.identifier().equals(target.enchantmentId()))
                             .orElse(false);
@@ -211,7 +227,7 @@ public final class AutoVillagerFilter {
         return identifier;
     }
 
-    private record Target(Identifier enchantmentId, int level, int maxEmeraldPrice) {
+    public record Target(Identifier enchantmentId, int level, int maxEmeraldPrice) {
     }
 
     private record Match(net.minecraft.core.Holder<Enchantment> enchantment, int level, int price) {

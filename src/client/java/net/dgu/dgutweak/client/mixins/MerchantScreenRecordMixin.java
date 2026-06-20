@@ -34,12 +34,12 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.record"), button -> sendRecordRequest())
                 .pos(buttonX, buttonY)
-                .size(60, 14)
+                .size(40, 14)
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.query"), button -> sendDetailCommand())
-                .pos(buttonX + 61, buttonY)
-                .size(61, 14)
+                .pos(buttonX + 41, buttonY)
+                .size(40, 14)
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.trades"), button -> {
@@ -47,18 +47,25 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                     this.onClose();
                     DGuTweakClient.requestTradeList();
                 })
-                .pos(buttonX, buttonY + 15)
-                .size(60, 14)
+                .pos(buttonX + 82, buttonY)
+                .size(40, 14)
                 .build());
 
         Button autoFilterButton = Button.builder(
                         Component.translatable("gui.dgutweak.auto_filter.start"),
                         button -> AutoVillagerFilter.toggle())
-                .pos(buttonX + 61, buttonY + 15)
-                .size(61, 14)
+                .pos(buttonX, buttonY + 15)
+                .size(81, 14)
                 .build();
         this.addRenderableWidget(autoFilterButton);
         AutoVillagerFilter.bindButton(autoFilterButton);
+
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("gui.dgutweak.auto_filter.settings"),
+                        button -> AutoVillagerFilter.openSettings())
+                .pos(buttonX + 82, buttonY + 15)
+                .size(40, 14)
+                .build());
     }
 
     private static void sendRecordRequest() {
