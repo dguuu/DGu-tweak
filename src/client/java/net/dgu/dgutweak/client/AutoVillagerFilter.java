@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class AutoVillagerFilter {
-    private static final int CYCLE_DELAY_TICKS = 1;
+    private static final int CYCLE_DELAY_TICKS = 0;
     private static final int RESPONSE_TIMEOUT_TICKS = 100;
 
     private static final List<Target> DEFAULT_TARGETS = List.of(
