@@ -195,10 +195,11 @@ public class ItemEnchantmentsScreen extends Screen {
         if (stack.is(Items.ENCHANTED_BOOK)) {
             return true;
         }
-        int enchantability = stack.getOrDefault(DataComponents.ENCHANTABLE, new Enchantable(0)).value();
-        if (enchantability <= 0) {
+        Enchantable enchantable = stack.get(DataComponents.ENCHANTABLE);
+        if (enchantable == null) {
             return false;
         }
+        int enchantability = enchantable.value();
         int maxBasePower = 20 + 2 * (enchantability / 4);
         int maxModifiedPower = Math.round(maxBasePower * 1.15F);
         Minecraft client = Minecraft.getInstance();
