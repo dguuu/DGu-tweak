@@ -89,6 +89,15 @@ public final class AutoVillagerFilter {
             notifyPlayer(Component.translatable("message.dgutweak.auto_filter.no_profession_targets"));
             return;
         }
+        boolean impossibleTarget = targets.stream()
+                .filter(target -> target.profession().equals(activeProfession))
+                .anyMatch(target -> target.enchantments().stream()
+                        .anyMatch(requirement -> !ItemEnchantmentsScreen.isPossibleTradeEnchantment(
+                                target.resultItem(), requirement)));
+        if (impossibleTarget) {
+            notifyPlayer(Component.translatable("message.dgutweak.auto_filter.impossible_trade_enchantment"));
+            return;
+        }
 
         active = true;
         awaitingResponse = false;

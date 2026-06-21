@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -16,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -137,7 +139,13 @@ public class ItemEnchantmentsScreen extends Screen {
                 if (row.dropdown.value().id() == null) continue;
                 int level = Integer.parseInt(row.level.getValue().trim());
                 if (level <= 0 || level > row.dropdown.value().maxLevel()) throw new NumberFormatException();
-                requirements.add(new AutoVillagerFilter.EnchantmentRequirement(row.dropdown.value().id(), level));
+                AutoVillagerFilter.EnchantmentRequirement requirement =
+                        new AutoVillagerFilter.EnchantmentRequirement(row.dropdown.value().id(), level);
+                if (!isPossibleTradeEnchantment(targetItem, requirement)) {
+                    error = Component.translatable("gui.dgutweak.auto_filter.impossible_trade_enchantment");
+                    return;
+                }
+                requirements.add(requirement);
             }
         } catch (NumberFormatException exception) {
             error = Component.translatable("gui.dgutweak.auto_filter.invalid");
@@ -178,6 +186,39 @@ public class ItemEnchantmentsScreen extends Screen {
         return client.level != null && client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
                 .anyMatch(holder -> holder.is(EnchantmentTags.ON_TRADED_EQUIPMENT)
                         && holder.value().canEnchant(stack));
+    }
+
+    static boolean isPossibleTradeEnchantment(Identifier targetItem,
+                                               AutoVillagerFilter.EnchantmentRequirement requirement) {
+        Item item = BuiltInRegistries.ITEM.getValue(targetItem);
+        ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
+        if (stack.is(Items.ENCHANTED_BOOK)) {
+            return true;
+        }
+        int enchantability = stack.getOrDefault(DataComponents.ENCHANTABLE, new Enchantable(0)).value();
+        if (enchantability <= 0) {
+            return false;
+        }
+        int maxBasePower = 20 + 2 * (enchantability / 4);
+        int maxModifiedPower = Math.round(maxBasePower * 1.15F);
+        Minecraft client = Minecraft.getInstance();
+        return client.level != null && client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
+                .filter(holder -> holder.key().identifier().equals(requirement.enchantmentId()))
+                .anyMatch(holder -> canRollLevel(holder.value(), requirement.level(), maxModifiedPower));
+    }
+
+    private static boolean canRollLevel(Enchantment enchantment, int requestedLevel, int maxPower) {
+        for (int power = 5; power <= maxPower; power++) {
+            for (int level = enchantment.getMaxLevel(); level >= enchantment.getMinLevel(); level--) {
+                if (power >= enchantment.getMinCost(level) && power <= enchantment.getMaxCost(level)) {
+                    if (level == requestedLevel) {
+                        return true;
+                    }
+                    break;
+                }
+            }
+        }
+        return false;
     }
 
     private record Row(Dropdown dropdown, EditBox level) { }

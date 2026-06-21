@@ -16,11 +16,13 @@
   "gui.dgutweak.auto_filter.invalid": "附魔 ID、等级或价格格式错误。",
   "gui.dgutweak.auto_filter.empty": "请至少设置一个条件。",
   "gui.dgutweak.auto_filter.select_item_first": "请先选择目标物品。",
+  "gui.dgutweak.auto_filter.impossible_trade_enchantment": "此附魔等级无法由村民的 5–19 级装备附魔产生。",
   "message.dgutweak.auto_filter.enabled": "[DGu-tweak] 已启用村民交易自动筛选器。",
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自动筛选器。",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易界面已关闭，已停止自动筛选。",
   "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] 请先打开尚未交易过的村民交易界面。",
   "message.dgutweak.auto_filter.no_profession_targets": "[DGu-tweak] 尚未设置这个职业的筛选条件。",
+  "message.dgutweak.auto_filter.impossible_trade_enchantment": "[DGu-tweak] 筛选条件包含村民无法产生的装备附魔等级，已取消自动筛选。",
   "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling 无法使用。",
   "message.dgutweak.auto_filter.found": "[DGu-tweak] 刷新 %3$s 次后找到 %1$s，原价 %2$s 个绿宝石。"
 }

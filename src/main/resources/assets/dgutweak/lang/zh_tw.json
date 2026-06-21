@@ -16,11 +16,13 @@
   "gui.dgutweak.auto_filter.invalid": "附魔 ID、等級或價格格式錯誤。",
   "gui.dgutweak.auto_filter.empty": "請至少設定一個條件。",
   "gui.dgutweak.auto_filter.select_item_first": "請先選擇目標物品。",
+  "gui.dgutweak.auto_filter.impossible_trade_enchantment": "此附魔等級無法由村民的 5–19 級裝備附魔產生。",
   "message.dgutweak.auto_filter.enabled": "[DGu-tweak] 已啟用村民交易自動篩選器。",
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自動篩選器。",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易畫面已關閉，已停止自動篩選。",
   "message.dgutweak.auto_filter.unavailable": "[DGu-tweak] 請先開啟尚未交易過的村民交易畫面。",
   "message.dgutweak.auto_filter.no_profession_targets": "[DGu-tweak] 尚未設定這個職業的篩選條件。",
+  "message.dgutweak.auto_filter.impossible_trade_enchantment": "[DGu-tweak] 篩選條件包含村民無法產生的裝備附魔等級，已取消自動篩選。",
   "message.dgutweak.auto_filter.missing_dependency": "[DGu-tweak] Trade Cycling 無法使用。",
   "message.dgutweak.auto_filter.found": "[DGu-tweak] 刷新 %3$s 次後找到 %1$s，原價 %2$s 顆綠寶石。"
 }
