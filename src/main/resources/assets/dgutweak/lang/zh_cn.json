@@ -6,6 +6,8 @@
   "gui.dgutweak.auto_filter.settings.title": "村民交易自动筛选设置",
   "gui.dgutweak.auto_filter.enchantment": "附魔 ID",
   "gui.dgutweak.auto_filter.item": "目标物品",
+  "gui.dgutweak.auto_filter.enchantments": "附魔",
+  "gui.dgutweak.auto_filter.enchantments.title": "必要附魔",
   "gui.dgutweak.auto_filter.none": "未设置",
   "gui.dgutweak.auto_filter.level": "等级",
   "gui.dgutweak.auto_filter.price": "原价 <",

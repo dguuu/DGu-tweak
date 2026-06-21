@@ -17,6 +17,8 @@
   "gui.dgutweak.auto_filter.settings.title": "Auto Villager Filter",
   "gui.dgutweak.auto_filter.enchantment": "Enchantment ID",
   "gui.dgutweak.auto_filter.item": "Target item",
+  "gui.dgutweak.auto_filter.enchantments": "Ench.",
+  "gui.dgutweak.auto_filter.enchantments.title": "Required enchantments",
   "gui.dgutweak.auto_filter.none": "Not configured",
   "gui.dgutweak.auto_filter.level": "Level",
   "gui.dgutweak.auto_filter.price": "Base <",

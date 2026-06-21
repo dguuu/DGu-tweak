@@ -66,13 +66,22 @@ public class AutoFilterSettingsScreen extends Screen {
             EditBox price = new EditBox(this.font, left + panelWidth - 54, y, 44, 19, Component.literal("20"));
             level.setMaxLength(2);
             price.setMaxLength(3);
-            level.setValue(target == null ? "1" : Integer.toString(Math.max(1, target.level())));
+            int savedLevel = target == null || target.enchantments().isEmpty() ? 1 : target.enchantments().get(0).level();
+            level.setValue(Integer.toString(savedLevel));
             price.setValue(target == null ? "20" : Integer.toString(target.maxEmeraldPrice()));
-            level.active = profession.equals("librarian");
             addDropdown(targetDropdown);
-            addRenderableWidget(level);
             addRenderableWidget(price);
-            rows.add(new TargetRow(targetDropdown, level, price));
+            TargetRow row = new TargetRow(targetDropdown, level, price,
+                    target == null ? List.of() : target.enchantments());
+            rows.add(row);
+            if (profession.equals("librarian")) {
+                addRenderableWidget(level);
+            } else {
+                addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
+                                button -> Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, row.enchantments,
+                                        enchantments -> row.enchantments = enchantments)))
+                        .pos(left + panelWidth - 96, y).size(36, 19).build());
+            }
         }
 
         int buttonY = top + 140;
@@ -142,13 +151,12 @@ public class AutoFilterSettingsScreen extends Screen {
                 if (level < 0 || price <= 0) {
                     throw new NumberFormatException();
                 }
-                targets.add(new AutoVillagerFilter.Target(
-                        profession,
+                List<AutoVillagerFilter.EnchantmentRequirement> enchantments = profession.equals("librarian")
+                        ? List.of(new AutoVillagerFilter.EnchantmentRequirement(choice.id(), level))
+                        : row.enchantments;
+                targets.add(new AutoVillagerFilter.Target(profession,
                         profession.equals("librarian") ? Identifier.fromNamespaceAndPath("minecraft", "enchanted_book") : choice.id(),
-                        profession.equals("librarian") ? choice.id() : null,
-                        level,
-                        price
-                ));
+                        enchantments, price));
             }
         } catch (NumberFormatException exception) {
             error = Component.translatable("gui.dgutweak.auto_filter.invalid");
@@ -182,7 +190,9 @@ public class AutoFilterSettingsScreen extends Screen {
     }
 
     private Choice findChoice(List<Choice> choices, AutoVillagerFilter.Target target) {
-        Identifier id = target == null ? null : profession.equals("librarian") ? target.enchantmentId() : target.resultItem();
+        Identifier id = target == null ? null : profession.equals("librarian")
+                ? target.enchantments().stream().findFirst().map(AutoVillagerFilter.EnchantmentRequirement::enchantmentId).orElse(null)
+                : target.resultItem();
         return choices.stream().filter(choice -> Objects.equals(choice.id(), id)).findFirst().orElse(choices.get(0));
     }
 
@@ -204,7 +214,23 @@ public class AutoFilterSettingsScreen extends Screen {
         addRenderableWidget(dropdown.button);
     }
 
-    private record TargetRow(Dropdown<Choice> target, EditBox level, EditBox price) {
+    private static final class TargetRow {
+        private final Dropdown<Choice> target;
+        private final EditBox level;
+        private final EditBox price;
+        private List<AutoVillagerFilter.EnchantmentRequirement> enchantments;
+
+        private TargetRow(Dropdown<Choice> target, EditBox level, EditBox price,
+                          List<AutoVillagerFilter.EnchantmentRequirement> enchantments) {
+            this.target = target;
+            this.level = level;
+            this.price = price;
+            this.enchantments = List.copyOf(enchantments);
+        }
+
+        private Dropdown<Choice> target() { return target; }
+        private EditBox level() { return level; }
+        private EditBox price() { return price; }
     }
 
     private record Choice(Identifier id, Component name) {

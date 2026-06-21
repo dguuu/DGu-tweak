@@ -35,13 +35,11 @@ final class AutoFilterConfig {
             for (int index = 0; index < count; index++) {
                 String profession = properties.getProperty("target." + index + ".profession", "librarian");
                 Identifier resultItem = Identifier.tryParse(properties.getProperty("target." + index + ".result_item", "minecraft:enchanted_book"));
-                String enchantmentValue = properties.getProperty("target." + index + ".enchantment", "");
-                Identifier enchantment = enchantmentValue.isBlank() ? null : Identifier.tryParse(enchantmentValue);
-                int level = Integer.parseInt(properties.getProperty("target." + index + ".level", "0"));
+                List<AutoVillagerFilter.EnchantmentRequirement> enchantments = readEnchantments(properties, index);
                 int price = Integer.parseInt(properties.getProperty("target." + index + ".max_price", "0"));
                 if (ProfessionTradeCatalog.PROFESSIONS.contains(profession) && resultItem != null && price > 0
-                        && (enchantment == null || level > 0)) {
-                    targets.add(new AutoVillagerFilter.Target(profession, resultItem, enchantment, level, price));
+                        && enchantments.stream().allMatch(enchantment -> enchantment.level() > 0)) {
+                    targets.add(new AutoVillagerFilter.Target(profession, resultItem, enchantments, price));
                 }
             }
             return targets.isEmpty() ? defaults : targets;
@@ -58,8 +56,12 @@ final class AutoFilterConfig {
             AutoVillagerFilter.Target target = targets.get(index);
             properties.setProperty("target." + index + ".profession", target.profession());
             properties.setProperty("target." + index + ".result_item", target.resultItem().toString());
-            properties.setProperty("target." + index + ".enchantment", target.enchantmentId() == null ? "" : target.enchantmentId().toString());
-            properties.setProperty("target." + index + ".level", Integer.toString(target.level()));
+            properties.setProperty("target." + index + ".enchantment.count", Integer.toString(target.enchantments().size()));
+            for (int enchantmentIndex = 0; enchantmentIndex < target.enchantments().size(); enchantmentIndex++) {
+                AutoVillagerFilter.EnchantmentRequirement enchantment = target.enchantments().get(enchantmentIndex);
+                properties.setProperty("target." + index + ".enchantment." + enchantmentIndex + ".id", enchantment.enchantmentId().toString());
+                properties.setProperty("target." + index + ".enchantment." + enchantmentIndex + ".level", Integer.toString(enchantment.level()));
+            }
             properties.setProperty("target." + index + ".max_price", Integer.toString(target.maxEmeraldPrice()));
         }
 
@@ -71,5 +73,27 @@ final class AutoFilterConfig {
         } catch (IOException exception) {
             DGuTweak.LOGGER.warn("Failed to save auto filter config", exception);
         }
+    }
+
+    private static List<AutoVillagerFilter.EnchantmentRequirement> readEnchantments(Properties properties, int targetIndex) {
+        List<AutoVillagerFilter.EnchantmentRequirement> enchantments = new ArrayList<>();
+        int count = Integer.parseInt(properties.getProperty("target." + targetIndex + ".enchantment.count", "-1"));
+        if (count < 0) {
+            String legacyId = properties.getProperty("target." + targetIndex + ".enchantment", "");
+            int legacyLevel = Integer.parseInt(properties.getProperty("target." + targetIndex + ".level", "0"));
+            Identifier id = legacyId.isBlank() ? null : Identifier.tryParse(legacyId);
+            if (id != null && legacyLevel > 0) {
+                enchantments.add(new AutoVillagerFilter.EnchantmentRequirement(id, legacyLevel));
+            }
+            return enchantments;
+        }
+        for (int index = 0; index < count; index++) {
+            Identifier id = Identifier.tryParse(properties.getProperty("target." + targetIndex + ".enchantment." + index + ".id", ""));
+            int level = Integer.parseInt(properties.getProperty("target." + targetIndex + ".enchantment." + index + ".level", "0"));
+            if (id != null && level > 0) {
+                enchantments.add(new AutoVillagerFilter.EnchantmentRequirement(id, level));
+            }
+        }
+        return enchantments;
     }
 }

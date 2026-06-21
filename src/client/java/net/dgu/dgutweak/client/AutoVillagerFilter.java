@@ -34,8 +34,8 @@ public final class AutoVillagerFilter {
     private static final int RESPONSE_TIMEOUT_TICKS = 100;
 
     private static final List<Target> DEFAULT_TARGETS = List.of(
-            new Target("librarian", id("minecraft:enchanted_book"), id("minecraft:mending"), 1, 20),
-            new Target("librarian", id("minecraft:enchanted_book"), id("minecraft:unbreaking"), 3, 15)
+            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:mending"), 1)), 20),
+            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:unbreaking"), 3)), 15)
     );
     private static List<Target> targets = new ArrayList<>(DEFAULT_TARGETS);
 
@@ -194,25 +194,43 @@ public final class AutoVillagerFilter {
                         || price >= target.maxEmeraldPrice()) {
                     continue;
                 }
-                if (target.enchantmentId() == null) {
+                if (target.enchantments().isEmpty()) {
                     return new Match(null, 0, result.getHoverName(), price);
                 }
                 ItemEnchantments enchantments = result.get(DataComponents.STORED_ENCHANTMENTS);
-                if (enchantments == null) {
+                if (enchantments == null || enchantments.isEmpty()) {
+                    enchantments = result.getEnchantments();
+                }
+                if (enchantments == null || enchantments.isEmpty()) {
                     continue;
                 }
-                for (var enchantmentEntry : enchantments.entrySet()) {
-                    boolean sameEnchantment = enchantmentEntry.getKey().unwrapKey()
-                            .map(key -> key.identifier().equals(target.enchantmentId()))
-                            .orElse(false);
-                    if (sameEnchantment
-                            && enchantmentEntry.getIntValue() == target.level()) {
-                        return new Match(enchantmentEntry.getKey(), target.level(), Component.empty(), price);
-                    }
+                if (matchesAllEnchantments(enchantments, target.enchantments())) {
+                    EnchantmentRequirement first = target.enchantments().get(0);
+                    var holder = enchantments.entrySet().stream()
+                            .filter(entry -> entry.getKey().unwrapKey().map(key -> key.identifier().equals(first.enchantmentId())).orElse(false))
+                            .map(java.util.Map.Entry::getKey)
+                            .findFirst()
+                            .orElse(null);
+                    return new Match(target.enchantments().size() == 1 ? holder : null,
+                            first.level(), result.getHoverName(), price);
                 }
             }
         }
         return null;
+    }
+
+    private static boolean matchesAllEnchantments(ItemEnchantments actual, List<EnchantmentRequirement> required) {
+        for (EnchantmentRequirement requirement : required) {
+            boolean matched = actual.entrySet().stream().anyMatch(entry ->
+                    entry.getIntValue() == requirement.level()
+                            && entry.getKey().unwrapKey()
+                            .map(key -> key.identifier().equals(requirement.enchantmentId()))
+                            .orElse(false));
+            if (!matched) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String findNearestProfession(Minecraft client) {
@@ -256,7 +274,13 @@ public final class AutoVillagerFilter {
         return identifier;
     }
 
-    public record Target(String profession, Identifier resultItem, Identifier enchantmentId, int level, int maxEmeraldPrice) {
+    public record Target(String profession, Identifier resultItem, List<EnchantmentRequirement> enchantments, int maxEmeraldPrice) {
+        public Target {
+            enchantments = List.copyOf(enchantments);
+        }
+    }
+
+    public record EnchantmentRequirement(Identifier enchantmentId, int level) {
     }
 
     private record Match(net.minecraft.core.Holder<Enchantment> enchantment, int level, Component itemName, int price) {
