@@ -18,13 +18,16 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class AutoFilterSettingsScreen extends Screen {
-    private static final int MAX_TARGETS = 3;
+    private static final int MAX_TARGETS = 6;
+    private static final int VISIBLE_TARGETS = 3;
 
     private final Screen parent;
     private final String profession;
     private final List<TargetRow> rows = new ArrayList<>();
     private Component error;
     private Dropdown<?> openDropdown;
+    private int scrollOffset;
+    private int rowsTop;
 
     public AutoFilterSettingsScreen(Screen parent) {
         this(parent, currentProfession());
@@ -42,6 +45,7 @@ public class AutoFilterSettingsScreen extends Screen {
         int panelWidth = Math.min(340, this.width - 20);
         int left = (this.width - panelWidth) / 2;
         int top = Math.max(5, (this.height - 174) / 2);
+        rowsTop = top + 68;
 
         List<Option<String>> professionOptions = ProfessionTradeCatalog.PROFESSIONS.stream()
                 .map(value -> new Option<>(value, ProfessionTradeCatalog.professionName(value)))
@@ -59,7 +63,7 @@ public class AutoFilterSettingsScreen extends Screen {
         for (int index = 0; index < MAX_TARGETS; index++) {
             AutoVillagerFilter.Target target = index < saved.size() ? saved.get(index) : null;
             Choice selected = findChoice(choices, target);
-            int y = top + 68 + index * 23;
+            int y = rowsTop + index * 23;
             Dropdown<Choice> targetDropdown = new Dropdown<>(left + 10, y, panelWidth - 112, 19,
                     choices.stream().map(choice -> new Option<>(choice, choice.name())).toList(), selected, value -> { });
             EditBox level = new EditBox(this.font, left + panelWidth - 96, y, 36, 19, Component.literal("1"));
@@ -74,15 +78,19 @@ public class AutoFilterSettingsScreen extends Screen {
             TargetRow row = new TargetRow(targetDropdown, level, price,
                     target == null ? List.of() : target.enchantments());
             rows.add(row);
+            Button enchantmentButton = null;
             if (profession.equals("librarian")) {
                 addRenderableWidget(level);
             } else {
-                addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
+                enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
                                 button -> Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, row.enchantments,
                                         enchantments -> row.enchantments = enchantments)))
-                        .pos(left + panelWidth - 96, y).size(36, 19).build());
+                        .pos(left + panelWidth - 96, y).size(36, 19).build();
+                addRenderableWidget(enchantmentButton);
             }
+            row.enchantmentButton = enchantmentButton;
         }
+        updateVisibleRows();
 
         int buttonY = top + 140;
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.save"), button -> save())
@@ -103,6 +111,9 @@ public class AutoFilterSettingsScreen extends Screen {
                 ? "gui.dgutweak.auto_filter.enchantment" : "gui.dgutweak.auto_filter.item"), left + 10, top + 55, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.level"), left + panelWidth - 96, top + 55, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.price"), left + panelWidth - 54, top + 55, 0xFFAAAAAA);
+        graphics.drawCenteredString(this.font,
+                (scrollOffset + 1) + "-" + Math.min(scrollOffset + VISIBLE_TARGETS, MAX_TARGETS) + " / " + MAX_TARGETS,
+                this.width / 2, top + 130, 0xFF888888);
         super.render(graphics, mouseX, mouseY, partialTick);
         if (openDropdown != null) {
             openDropdown.renderList(graphics, mouseX, mouseY);
@@ -134,7 +145,32 @@ public class AutoFilterSettingsScreen extends Screen {
         if (openDropdown != null && openDropdown.scroll(scrollY)) {
             return true;
         }
+        int maxOffset = MAX_TARGETS - VISIBLE_TARGETS;
+        int nextOffset = Math.max(0, Math.min(maxOffset, scrollOffset - (int) Math.signum(scrollY)));
+        if (nextOffset != scrollOffset) {
+            scrollOffset = nextOffset;
+            updateVisibleRows();
+            return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    private void updateVisibleRows() {
+        for (int index = 0; index < rows.size(); index++) {
+            TargetRow row = rows.get(index);
+            boolean visible = index >= scrollOffset && index < scrollOffset + VISIBLE_TARGETS;
+            int y = rowsTop + (index - scrollOffset) * 23;
+            row.target.button.visible = visible;
+            row.target.button.setY(y);
+            row.price.visible = visible;
+            row.price.setY(y);
+            row.level.visible = visible && profession.equals("librarian");
+            row.level.setY(y);
+            if (row.enchantmentButton != null) {
+                row.enchantmentButton.visible = visible;
+                row.enchantmentButton.setY(y);
+            }
+        }
     }
 
     private void save() {
@@ -218,6 +254,7 @@ public class AutoFilterSettingsScreen extends Screen {
         private final Dropdown<Choice> target;
         private final EditBox level;
         private final EditBox price;
+        private Button enchantmentButton;
         private List<AutoVillagerFilter.EnchantmentRequirement> enchantments;
 
         private TargetRow(Dropdown<Choice> target, EditBox level, EditBox price,

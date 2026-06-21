@@ -18,12 +18,16 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ItemEnchantmentsScreen extends Screen {
+    private static final int MAX_ENCHANTMENTS = 5;
+    private static final int VISIBLE_ENCHANTMENTS = 3;
     private final Screen parent;
     private final List<AutoVillagerFilter.EnchantmentRequirement> initial;
     private final Consumer<List<AutoVillagerFilter.EnchantmentRequirement>> onSave;
     private final List<Row> rows = new ArrayList<>();
     private Dropdown openDropdown;
     private Component error;
+    private int scrollOffset;
+    private int rowsTop;
 
     public ItemEnchantmentsScreen(Screen parent, List<AutoVillagerFilter.EnchantmentRequirement> initial,
                                   Consumer<List<AutoVillagerFilter.EnchantmentRequirement>> onSave) {
@@ -39,12 +43,13 @@ public class ItemEnchantmentsScreen extends Screen {
         int panelWidth = Math.min(320, width - 20);
         int left = (width - panelWidth) / 2;
         int top = Math.max(8, (height - 145) / 2);
+        rowsTop = top + 35;
         List<Option> options = enchantmentOptions();
-        for (int index = 0; index < 3; index++) {
+        for (int index = 0; index < MAX_ENCHANTMENTS; index++) {
             AutoVillagerFilter.EnchantmentRequirement saved = index < initial.size() ? initial.get(index) : null;
             Option selected = options.stream().filter(option -> Objects.equals(option.id(), saved == null ? null : saved.enchantmentId()))
                     .findFirst().orElse(options.get(0));
-            int y = top + 35 + index * 24;
+            int y = rowsTop + index * 24;
             Dropdown dropdown = new Dropdown(left + 10, y, panelWidth - 62, 20, options, selected);
             EditBox level = new EditBox(font, left + panelWidth - 46, y, 36, 20, Component.literal("1"));
             level.setMaxLength(2);
@@ -53,6 +58,7 @@ public class ItemEnchantmentsScreen extends Screen {
             addRenderableWidget(level);
             rows.add(new Row(dropdown, level));
         }
+        updateVisibleRows();
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.save"), button -> save())
                 .pos(width / 2 - 82, top + 110).size(78, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.cancel"), button -> onClose())
@@ -67,6 +73,9 @@ public class ItemEnchantmentsScreen extends Screen {
         int top = Math.max(8, (height - 145) / 2);
         graphics.fill(left, top, left + panelWidth, top + 140, 0xF0202020);
         graphics.drawCenteredString(font, title, width / 2, top + 10, 0xFFFFFFFF);
+        graphics.drawCenteredString(font,
+                (scrollOffset + 1) + "-" + Math.min(scrollOffset + VISIBLE_ENCHANTMENTS, MAX_ENCHANTMENTS) + " / " + MAX_ENCHANTMENTS,
+                width / 2, top + 100, 0xFF888888);
         super.render(graphics, mouseX, mouseY, partialTick);
         if (openDropdown != null) openDropdown.renderList(graphics, mouseX, mouseY);
         if (error != null) graphics.drawCenteredString(font, error, width / 2, top + 133, 0xFFFF5555);
@@ -85,7 +94,26 @@ public class ItemEnchantmentsScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (openDropdown != null) return openDropdown.scroll(scrollY);
+        int nextOffset = Math.max(0, Math.min(MAX_ENCHANTMENTS - VISIBLE_ENCHANTMENTS,
+                scrollOffset - (int) Math.signum(scrollY)));
+        if (nextOffset != scrollOffset) {
+            scrollOffset = nextOffset;
+            updateVisibleRows();
+            return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    private void updateVisibleRows() {
+        for (int index = 0; index < rows.size(); index++) {
+            Row row = rows.get(index);
+            boolean visible = index >= scrollOffset && index < scrollOffset + VISIBLE_ENCHANTMENTS;
+            int y = rowsTop + (index - scrollOffset) * 24;
+            row.dropdown.button.visible = visible;
+            row.dropdown.button.setY(y);
+            row.level.visible = visible;
+            row.level.setY(y);
+        }
     }
 
     @Override
