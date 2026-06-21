@@ -7,9 +7,12 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.EnchantmentTags;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,6 +24,7 @@ public class ItemEnchantmentsScreen extends Screen {
     private static final int MAX_ENCHANTMENTS = 5;
     private static final int VISIBLE_ENCHANTMENTS = 3;
     private final Screen parent;
+    private final Identifier targetItem;
     private final List<AutoVillagerFilter.EnchantmentRequirement> initial;
     private final Consumer<List<AutoVillagerFilter.EnchantmentRequirement>> onSave;
     private final List<Row> rows = new ArrayList<>();
@@ -29,10 +33,12 @@ public class ItemEnchantmentsScreen extends Screen {
     private int scrollOffset;
     private int rowsTop;
 
-    public ItemEnchantmentsScreen(Screen parent, List<AutoVillagerFilter.EnchantmentRequirement> initial,
+    public ItemEnchantmentsScreen(Screen parent, Identifier targetItem,
+                                  List<AutoVillagerFilter.EnchantmentRequirement> initial,
                                   Consumer<List<AutoVillagerFilter.EnchantmentRequirement>> onSave) {
         super(Component.translatable("gui.dgutweak.auto_filter.enchantments.title"));
         this.parent = parent;
+        this.targetItem = targetItem;
         this.initial = List.copyOf(initial);
         this.onSave = onSave;
     }
@@ -44,7 +50,7 @@ public class ItemEnchantmentsScreen extends Screen {
         int left = (width - panelWidth) / 2;
         int top = Math.max(8, (height - 145) / 2);
         rowsTop = top + 35;
-        List<Option> options = enchantmentOptions();
+        List<Option> options = enchantmentOptions(targetItem);
         for (int index = 0; index < MAX_ENCHANTMENTS; index++) {
             AutoVillagerFilter.EnchantmentRequirement saved = index < initial.size() ? initial.get(index) : null;
             Option selected = options.stream().filter(option -> Objects.equals(option.id(), saved == null ? null : saved.enchantmentId()))
@@ -127,7 +133,7 @@ public class ItemEnchantmentsScreen extends Screen {
             for (Row row : rows) {
                 if (row.dropdown.value().id() == null) continue;
                 int level = Integer.parseInt(row.level.getValue().trim());
-                if (level <= 0) throw new NumberFormatException();
+                if (level <= 0 || level > row.dropdown.value().maxLevel()) throw new NumberFormatException();
                 requirements.add(new AutoVillagerFilter.EnchantmentRequirement(row.dropdown.value().id(), level));
             }
         } catch (NumberFormatException exception) {
@@ -138,21 +144,24 @@ public class ItemEnchantmentsScreen extends Screen {
         onClose();
     }
 
-    private static List<Option> enchantmentOptions() {
+    private static List<Option> enchantmentOptions(Identifier targetItem) {
         List<Option> options = new ArrayList<>();
-        options.add(new Option(null, Component.translatable("gui.dgutweak.auto_filter.none")));
+        options.add(new Option(null, Component.translatable("gui.dgutweak.auto_filter.none"), 0));
         Minecraft client = Minecraft.getInstance();
         if (client.level != null) {
+            Item item = BuiltInRegistries.ITEM.getValue(targetItem);
+            ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
             client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
-                    .filter(holder -> holder.is(EnchantmentTags.TRADEABLE))
+                    .filter(holder -> holder.is(EnchantmentTags.TRADEABLE) && holder.value().canEnchant(stack))
                     .sorted(Comparator.comparing(holder -> holder.value().description().getString()))
-                    .forEach(holder -> options.add(new Option(holder.key().identifier(), holder.value().description())));
+                    .forEach(holder -> options.add(new Option(
+                            holder.key().identifier(), holder.value().description(), holder.value().getMaxLevel())));
         }
         return options;
     }
 
     private record Row(Dropdown dropdown, EditBox level) { }
-    private record Option(Identifier id, Component label) { }
+    private record Option(Identifier id, Component label, int maxLevel) { }
 
     private final class Dropdown {
         private static final int MAX_ROWS = 6;

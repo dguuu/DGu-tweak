@@ -204,7 +204,7 @@ public class AutoFilterSettingsScreen extends Screen {
             error = Component.translatable("gui.dgutweak.auto_filter.select_item_first");
             return;
         }
-        Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, target.enchantments(), enchantments -> {
+        Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, target.resultItem(), target.enchantments(), enchantments -> {
             AutoVillagerFilter.Target current = stagedTargets.get(slot);
             stagedTargets.set(slot, new AutoVillagerFilter.Target(
                     current.profession(), current.resultItem(), enchantments, current.maxEmeraldPrice()));
