@@ -13,6 +13,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -151,8 +152,10 @@ public class ItemEnchantmentsScreen extends Screen {
         if (client.level != null) {
             Item item = BuiltInRegistries.ITEM.getValue(targetItem);
             ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
+            boolean enchantedBook = stack.is(Items.ENCHANTED_BOOK);
             client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
-                    .filter(holder -> holder.is(EnchantmentTags.TRADEABLE) && holder.value().canEnchant(stack))
+                    .filter(holder -> holder.is(EnchantmentTags.TRADEABLE)
+                            && (enchantedBook || holder.value().canEnchant(stack)))
                     .sorted(Comparator.comparing(holder -> holder.value().description().getString()))
                     .forEach(holder -> options.add(new Option(
                             holder.key().identifier(), holder.value().description(), holder.value().getMaxLevel())));

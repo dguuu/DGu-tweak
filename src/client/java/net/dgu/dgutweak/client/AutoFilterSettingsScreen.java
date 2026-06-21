@@ -6,10 +6,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.EnchantmentTags;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -65,7 +63,7 @@ public class AutoFilterSettingsScreen extends Screen {
                 stagedTargets.add(index < saved.size() ? saved.get(index) : null);
             }
         }
-        List<Choice> choices = profession.equals("librarian") ? enchantmentChoices() : itemChoices();
+        List<Choice> choices = itemChoices();
 
         for (int index = 0; index < MAX_TARGETS; index++) {
             AutoVillagerFilter.Target target = stagedTargets.get(index);
@@ -73,28 +71,19 @@ public class AutoFilterSettingsScreen extends Screen {
             int y = rowsTop + index * 23;
             Dropdown<Choice> targetDropdown = new Dropdown<>(left + 10, y, panelWidth - 112, 19,
                     choices.stream().map(choice -> new Option<>(choice, choice.name())).toList(), selected, value -> { });
-            EditBox level = new EditBox(this.font, left + panelWidth - 96, y, 36, 19, Component.literal("1"));
             EditBox price = new EditBox(this.font, left + panelWidth - 54, y, 44, 19, Component.literal("20"));
-            level.setMaxLength(2);
             price.setMaxLength(3);
-            int savedLevel = target == null || target.enchantments().isEmpty() ? 1 : target.enchantments().get(0).level();
-            level.setValue(Integer.toString(savedLevel));
             price.setValue(target == null ? "20" : Integer.toString(target.maxEmeraldPrice()));
             addDropdown(targetDropdown);
             addRenderableWidget(price);
-            TargetRow row = new TargetRow(targetDropdown, level, price,
+            TargetRow row = new TargetRow(targetDropdown, price,
                     target == null ? List.of() : target.enchantments());
             rows.add(row);
-            Button enchantmentButton = null;
-            if (profession.equals("librarian")) {
-                addRenderableWidget(level);
-            } else {
-                int slot = index;
-                enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
-                                button -> openEnchantments(slot))
-                        .pos(left + panelWidth - 96, y).size(36, 19).build();
-                addRenderableWidget(enchantmentButton);
-            }
+            int slot = index;
+            Button enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
+                            button -> openEnchantments(slot))
+                    .pos(left + panelWidth - 96, y).size(36, 19).build();
+            addRenderableWidget(enchantmentButton);
             row.enchantmentButton = enchantmentButton;
         }
         updateVisibleRows();
@@ -114,9 +103,8 @@ public class AutoFilterSettingsScreen extends Screen {
         int top = Math.max(5, (this.height - 174) / 2);
         graphics.fill(left, top, left + panelWidth, top + 168, 0xF0202020);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
-        graphics.drawString(this.font, Component.translatable(profession.equals("librarian")
-                ? "gui.dgutweak.auto_filter.enchantment" : "gui.dgutweak.auto_filter.item"), left + 10, top + 55, 0xFFAAAAAA);
-        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.level"), left + panelWidth - 96, top + 55, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.item"), left + 10, top + 55, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.enchantments"), left + panelWidth - 96, top + 55, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.price"), left + panelWidth - 54, top + 55, 0xFFAAAAAA);
         graphics.drawCenteredString(this.font,
                 (scrollOffset + 1) + "-" + Math.min(scrollOffset + VISIBLE_TARGETS, MAX_TARGETS) + " / " + MAX_TARGETS,
@@ -171,8 +159,6 @@ public class AutoFilterSettingsScreen extends Screen {
             row.target.button.setY(y);
             row.price.visible = visible;
             row.price.setY(y);
-            row.level.visible = visible && profession.equals("librarian");
-            row.level.setY(y);
             if (row.enchantmentButton != null) {
                 row.enchantmentButton.visible = visible;
                 row.enchantmentButton.setY(y);
@@ -220,20 +206,18 @@ public class AutoFilterSettingsScreen extends Screen {
                     stagedTargets.set(index, null);
                     continue;
                 }
-                int level = profession.equals("librarian") ? Integer.parseInt(row.level().getValue().trim()) : 0;
                 int price = Integer.parseInt(row.price().getValue().trim());
-                if ((profession.equals("librarian") && level <= 0) || price <= 0) {
+                if (price <= 0) {
                     throw new NumberFormatException();
                 }
-                List<AutoVillagerFilter.EnchantmentRequirement> enchantments = profession.equals("librarian")
-                        ? List.of(new AutoVillagerFilter.EnchantmentRequirement(choice.id(), level))
-                        : row.enchantments;
+                AutoVillagerFilter.Target previous = stagedTargets.get(index);
+                if (previous != null && !previous.resultItem().equals(choice.id())) {
+                    row.enchantments = List.of();
+                }
                 stagedTargets.set(index, new AutoVillagerFilter.Target(
                         profession,
-                        profession.equals("librarian")
-                                ? Identifier.fromNamespaceAndPath("minecraft", "enchanted_book")
-                                : choice.id(),
-                        enchantments,
+                        choice.id(),
+                        row.enchantments,
                         price));
             }
             error = null;
@@ -253,24 +237,8 @@ public class AutoFilterSettingsScreen extends Screen {
         return choices;
     }
 
-    private static List<Choice> enchantmentChoices() {
-        List<Choice> choices = new ArrayList<>();
-        choices.add(Choice.empty());
-        Minecraft client = Minecraft.getInstance();
-        if (client.level == null) {
-            return choices;
-        }
-        client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
-                .filter(holder -> holder.is(EnchantmentTags.TRADEABLE))
-                .sorted(Comparator.comparing(holder -> holder.value().description().getString()))
-                .forEach(holder -> choices.add(new Choice(holder.key().identifier(), holder.value().description())));
-        return choices;
-    }
-
     private Choice findChoice(List<Choice> choices, AutoVillagerFilter.Target target) {
-        Identifier id = target == null ? null : profession.equals("librarian")
-                ? target.enchantments().stream().findFirst().map(AutoVillagerFilter.EnchantmentRequirement::enchantmentId).orElse(null)
-                : target.resultItem();
+        Identifier id = target == null ? null : target.resultItem();
         return choices.stream().filter(choice -> Objects.equals(choice.id(), id)).findFirst().orElse(choices.get(0));
     }
 
@@ -294,21 +262,18 @@ public class AutoFilterSettingsScreen extends Screen {
 
     private static final class TargetRow {
         private final Dropdown<Choice> target;
-        private final EditBox level;
         private final EditBox price;
         private Button enchantmentButton;
         private List<AutoVillagerFilter.EnchantmentRequirement> enchantments;
 
-        private TargetRow(Dropdown<Choice> target, EditBox level, EditBox price,
+        private TargetRow(Dropdown<Choice> target, EditBox price,
                           List<AutoVillagerFilter.EnchantmentRequirement> enchantments) {
             this.target = target;
-            this.level = level;
             this.price = price;
             this.enchantments = List.copyOf(enchantments);
         }
 
         private Dropdown<Choice> target() { return target; }
-        private EditBox level() { return level; }
         private EditBox price() { return price; }
     }
 
