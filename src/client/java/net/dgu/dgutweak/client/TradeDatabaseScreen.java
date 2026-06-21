@@ -54,6 +54,7 @@ public class TradeDatabaseScreen extends Screen {
     private TradeListS2CPayload.Entry trackedEntry;
     private int actionButtonX;
     private int actionButtonY;
+    private boolean bestButtonVisible;
     private int refreshTicks;
 
     public TradeDatabaseScreen(List<TradeListS2CPayload.Entry> entries) {
@@ -242,6 +243,12 @@ public class TradeDatabaseScreen extends Screen {
                 ClientPlayNetworking.send(new GlowVillagerC2SPayload(entry.uuid(), false));
                 return true;
             }
+            if (this.bestButtonVisible
+                    && inside(event, this.actionButtonX, this.actionButtonY + 20,
+                    this.actionButtonX + 118, this.actionButtonY + 36)) {
+                DGuTweakClientConfig.toggleBestTrade(manualBestKey(entry));
+                return true;
+            }
         }
         return super.mouseReleased(event);
     }
@@ -264,7 +271,11 @@ public class TradeDatabaseScreen extends Screen {
                 .filter(entry -> query.isBlank() || searchable(entry).contains(query))
                 .toList();
 
-        if (this.bestOnly) {
+        if (this.bestOnly && this.selectedProfession.equals(ENCHANTED_ITEMS_CATEGORY)) {
+            this.visibleEntries = matches.stream()
+                    .filter(entry -> DGuTweakClientConfig.isBestTrade(manualBestKey(entry)))
+                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        } else if (this.bestOnly) {
             Map<String, TradeListS2CPayload.Entry> best = new LinkedHashMap<>();
             for (TradeListS2CPayload.Entry entry : matches) {
                 if (!isBestEligible(entry)) {
@@ -333,7 +344,9 @@ public class TradeDatabaseScreen extends Screen {
             if (selected || hovered) {
                 graphics.fill(left - 2, y - 1, right, y + 22, selected ? SELECTED : 0x55444444);
             }
-            graphics.drawString(this.font, trim(entry.resultCount() + "x " + resultName(entry), right - left - 6), left, y, selected ? 0xFFFFFFFF : TEXT);
+            String marker = this.selectedProfession.equals(ENCHANTED_ITEMS_CATEGORY)
+                    && DGuTweakClientConfig.isBestTrade(manualBestKey(entry)) ? "★ " : "";
+            graphics.drawString(this.font, trim(marker + entry.resultCount() + "x " + resultName(entry), right - left - 6), left, y, selected ? 0xFFFFFFFF : TEXT);
             graphics.drawString(this.font, trim(priceText(entry) + " | " + distanceText(entry), right - left - 6), left, y + 10, entry.live() ? ACCENT : MUTED);
         }
     }
@@ -352,12 +365,20 @@ public class TradeDatabaseScreen extends Screen {
         y = drawLine(graphics, t("distance"), distanceText(entry), left, right, y);
         y = drawLine(graphics, t("status"), entry.locked() ? t("locked_trade") : (entry.live() ? t("loaded") : t("not_loaded")), left, right, y);
 
+        this.bestButtonVisible = this.selectedProfession.equals(ENCHANTED_ITEMS_CATEGORY) && !this.bestOnly;
         this.actionButtonX = left;
-        this.actionButtonY = Math.min(bottom - 18, y + 8);
+        this.actionButtonY = Math.min(bottom - (this.bestButtonVisible ? 38 : 18), y + 8);
         graphics.fill(this.actionButtonX, this.actionButtonY, this.actionButtonX + 56, this.actionButtonY + 16, 0xFF2D4F66);
         graphics.drawCenteredString(this.font, t("glow"), this.actionButtonX + 28, this.actionButtonY + 4, 0xFFFFFFFF);
         graphics.fill(this.actionButtonX + 62, this.actionButtonY, this.actionButtonX + 118, this.actionButtonY + 16, 0xFF3F4F2D);
         graphics.drawCenteredString(this.font, t("track"), this.actionButtonX + 90, this.actionButtonY + 4, 0xFFFFFFFF);
+        if (this.bestButtonVisible) {
+            boolean selected = DGuTweakClientConfig.isBestTrade(manualBestKey(entry));
+            graphics.fill(this.actionButtonX, this.actionButtonY + 20,
+                    this.actionButtonX + 118, this.actionButtonY + 36, selected ? 0xFF6A4F20 : 0xFF374151);
+            graphics.drawCenteredString(this.font, selected ? t("remove_best") : t("add_best"),
+                    this.actionButtonX + 59, this.actionButtonY + 24, 0xFFFFFFFF);
+        }
     }
 
     private int drawLine(GuiGraphics graphics, String label, String value, int left, int right, int y) {
@@ -440,6 +461,10 @@ public class TradeDatabaseScreen extends Screen {
 
     private static String tradeKey(TradeListS2CPayload.Entry entry) {
         return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount() + "|" + entry.baseCostA() + "|" + entry.costB();
+    }
+
+    private static String manualBestKey(TradeListS2CPayload.Entry entry) {
+        return entry.uuid() + "|" + entry.resultName() + "|" + entry.resultCount();
     }
 
     private static String bestGroupKey(TradeListS2CPayload.Entry entry) {

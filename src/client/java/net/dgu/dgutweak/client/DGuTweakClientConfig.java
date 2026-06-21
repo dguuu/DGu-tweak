@@ -15,10 +15,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.Base64;
 
 public final class DGuTweakClientConfig {
     private static final String CONFIG_FILE = "dgutweak-client.properties";
@@ -28,6 +31,7 @@ public final class DGuTweakClientConfig {
 
     private static boolean loaded;
     private static String language = DEFAULT_LANGUAGE;
+    private static final Set<String> bestTrades = new HashSet<>();
 
     private DGuTweakClientConfig() {
     }
@@ -50,6 +54,16 @@ public final class DGuTweakClientConfig {
                 }
             }
             language = normalizeLanguage(properties.getProperty("language", DEFAULT_LANGUAGE));
+            bestTrades.clear();
+            String encodedTrades = properties.getProperty("best_trades", "");
+            for (String encoded : encodedTrades.split(",")) {
+                if (encoded.isBlank()) continue;
+                try {
+                    bestTrades.add(new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8));
+                } catch (IllegalArgumentException exception) {
+                    DGuTweak.LOGGER.warn("Ignoring invalid best trade config entry");
+                }
+            }
         } catch (IOException exception) {
             DGuTweak.LOGGER.warn("Failed to load DGu Tweak client config", exception);
             language = DEFAULT_LANGUAGE;
@@ -109,6 +123,19 @@ public final class DGuTweakClientConfig {
         return true;
     }
 
+    public static boolean isBestTrade(String key) {
+        if (!loaded) load();
+        return bestTrades.contains(key);
+    }
+
+    public static boolean toggleBestTrade(String key) {
+        if (!loaded) load();
+        boolean selected = bestTrades.add(key);
+        if (!selected) bestTrades.remove(key);
+        save();
+        return selected;
+    }
+
     private static String normalizeLanguage(String value) {
         String normalized = value == null ? DEFAULT_LANGUAGE : value.trim().toLowerCase(Locale.ROOT);
         return TRANSLATIONS.containsKey(normalized) ? normalized : DEFAULT_LANGUAGE;
@@ -118,6 +145,11 @@ public final class DGuTweakClientConfig {
         Path path = Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve(CONFIG_FILE);
         Properties properties = new Properties();
         properties.setProperty("language", language);
+        properties.setProperty("best_trades", bestTrades.stream()
+                .map(value -> Base64.getUrlEncoder().withoutPadding()
+                        .encodeToString(value.getBytes(StandardCharsets.UTF_8)))
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(",")));
         try {
             Files.createDirectories(path.getParent());
             try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
@@ -181,6 +213,8 @@ public final class DGuTweakClientConfig {
         zhTw.put("not_loaded", "\u672a\u8f09\u5165");
         zhTw.put("glow", "\u767c\u5149");
         zhTw.put("track", "\u8ffd\u8e64");
+        zhTw.put("add_best", "\u52a0\u5165\u6700\u4f73");
+        zhTw.put("remove_best", "\u79fb\u51fa\u6700\u4f73");
         zhTw.put("tracking", "\u8ffd\u8e64");
         zhTw.put("other_dimension", "\u5176\u4ed6\u7dad\u5ea6");
         zhTw.put("live", "\u76ee\u524d");
@@ -228,6 +262,8 @@ public final class DGuTweakClientConfig {
         enUs.put("not_loaded", "Not loaded");
         enUs.put("glow", "Glow");
         enUs.put("track", "Track");
+        enUs.put("add_best", "Add to best");
+        enUs.put("remove_best", "Remove best");
         enUs.put("tracking", "Tracking");
         enUs.put("other_dimension", "other dimension");
         enUs.put("live", "live");
