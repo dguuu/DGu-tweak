@@ -11,12 +11,15 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.phys.Vec3;
@@ -83,7 +86,7 @@ public class DGuTweakCommand {
 
     private static int openTradeUi(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("This command can only be used by a player."));
+            source.sendFailure(Component.translatable("command.dgutweak.player_only"));
             return 0;
         }
         DGuTweak.sendTradeList(player);
@@ -92,7 +95,7 @@ public class DGuTweakCommand {
 
     private static int verifyRecordedMerchants(CommandSourceStack source) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("This command can only be used by a player."));
+            source.sendFailure(Component.translatable("command.dgutweak.player_only"));
             return 0;
         }
 
@@ -125,19 +128,20 @@ public class DGuTweakCommand {
         int finalKept = kept;
         int finalRemoved = removed;
         int finalSkipped = skipped;
-        source.sendSuccess(() -> Component.literal("[DGu-tweak] Verify complete. Alive/loaded: " + finalKept + ", removed missing in loaded chunks: " + finalRemoved + ", skipped unloaded: " + finalSkipped + "."), false);
+        source.sendSuccess(() -> Component.translatable("command.dgutweak.verify.complete",
+                finalKept, finalRemoved, finalSkipped), false);
         return removed;
     }
 
     private static int listVillagers(CommandSourceStack source, String professionFilter, String sort) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("This command can only be used by a player."));
+            source.sendFailure(Component.translatable("command.dgutweak.player_only"));
             return 0;
         }
 
         Map<UUID, RecordedVillagersData.VillagerRecord> records = RecordedVillagersData.getOrCreate(player.level()).getRecords();
         if (records.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No recorded villagers yet."), false);
+            source.sendSuccess(() -> Component.translatable("command.dgutweak.list.empty"), false);
             return 0;
         }
 
@@ -145,7 +149,7 @@ public class DGuTweakCommand {
                 .filter(record -> professionFilter == null || record.profession().equalsIgnoreCase(professionFilter))
                 .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (filtered.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No recorded villagers for profession: " + professionFilter), false);
+            source.sendSuccess(() -> Component.translatable("command.dgutweak.list.empty_profession", professionFilter), false);
             return 0;
         }
 
@@ -156,18 +160,20 @@ public class DGuTweakCommand {
             default -> filtered.sort(Comparator.comparingDouble(record -> playerPos.distanceTo(posCenter(record))));
         }
 
-        source.sendSuccess(() -> Component.literal("=== Recorded villagers (" + filtered.size() + "), sorted by " + sort + " ==="), false);
+        source.sendSuccess(() -> Component.translatable("command.dgutweak.list.header", filtered.size(), sort), false);
         for (RecordedVillagersData.VillagerRecord record : filtered) {
             double distance = playerPos.distanceTo(posCenter(record));
             MutableComponent coords = Component.literal(formatPos(record))
                     .setStyle(Style.EMPTY
                             .withClickEvent(new ClickEvent.RunCommand("/tp @s " + record.pos().getX() + " " + record.pos().getY() + " " + record.pos().getZ()))
                             .withUnderlined(true));
-            MutableComponent details = Component.literal(" [detail]")
+            MutableComponent details = Component.translatable("command.dgutweak.list.detail")
                     .setStyle(Style.EMPTY
                             .withClickEvent(new ClickEvent.RunCommand("/vt detail " + record.uuid()))
                             .withUnderlined(true));
-            source.sendSuccess(() -> Component.literal(record.dimension().identifier().getPath() + " " + record.profession() + " L" + record.level() + " ")
+            source.sendSuccess(() -> Component.literal(record.dimension().identifier().getPath() + " ")
+                    .append(professionComponent(record.profession()))
+                    .append(Component.literal(" L" + record.level() + " "))
                     .append(coords)
                     .append(Component.literal(String.format(" %.0fm", distance)))
                     .append(details), false);
@@ -178,7 +184,7 @@ public class DGuTweakCommand {
 
     private static int showDetail(CommandSourceStack source, String uuidText) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
-            source.sendFailure(Component.literal("This command can only be used by a player."));
+            source.sendFailure(Component.translatable("command.dgutweak.player_only"));
             return 0;
         }
 
@@ -186,20 +192,22 @@ public class DGuTweakCommand {
         try {
             uuid = UUID.fromString(uuidText);
         } catch (IllegalArgumentException exception) {
-            source.sendFailure(Component.literal("Invalid UUID."));
+            source.sendFailure(Component.translatable("command.dgutweak.detail.invalid_uuid"));
             return 0;
         }
 
         RecordedVillagersData.VillagerRecord record = RecordedVillagersData.getOrCreate(player.level()).getRecords().get(uuid);
         if (record == null) {
-            source.sendFailure(Component.literal("No recorded villager found for that UUID."));
+            source.sendFailure(Component.translatable("command.dgutweak.detail.not_found"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("=== " + record.profession() + " L" + record.level() + " @ " + formatPos(record) + " ==="), false);
-        source.sendSuccess(() -> Component.literal("Recorded by " + record.recordedBy() + " in " + record.dimension().identifier().getPath()), false);
-        sendOffers(source, "Trades", record.offers(), findLiveOffers(source, record));
-        sendOffers(source, "Locked trades", record.lockedOffers(), null);
+        source.sendSuccess(() -> Component.translatable("command.dgutweak.detail.header",
+                professionComponent(record.profession()), record.level(), formatPos(record)), false);
+        source.sendSuccess(() -> Component.translatable("command.dgutweak.detail.recorded_by",
+                record.recordedBy(), record.dimension().identifier().getPath()), false);
+        sendOffers(source, "command.dgutweak.detail.trades", record.offers(), findLiveOffers(source, record));
+        sendOffers(source, "command.dgutweak.detail.locked_trades", record.lockedOffers(), null);
         return 1;
     }
 
@@ -216,26 +224,28 @@ public class DGuTweakCommand {
         return null;
     }
 
-    private static void sendOffers(CommandSourceStack source, String title, Iterable<MerchantOffer> offers, MerchantOffers liveOffers) {
-        source.sendSuccess(() -> Component.literal(title + ":"), false);
+    private static void sendOffers(CommandSourceStack source, String titleKey, Iterable<MerchantOffer> offers, MerchantOffers liveOffers) {
+        source.sendSuccess(() -> Component.translatable(titleKey), false);
         int index = 0;
         for (MerchantOffer offer : offers) {
             MerchantOffer liveOffer = liveOffers != null && index < liveOffers.size() ? liveOffers.get(index) : null;
-            String line = formatRecordedOffer(offer) + formatLivePriceSuffix(offer, liveOffer);
-            source.sendSuccess(() -> Component.literal("  " + line), false);
+            Component line = formatRecordedOffer(offer).append(formatLivePriceSuffix(offer, liveOffer));
+            source.sendSuccess(() -> Component.literal("  ").append(line), false);
             index++;
         }
     }
 
-    private static String formatRecordedOffer(MerchantOffer offer) {
-        return formatCost(offer.getBaseCostA(), offer.getCostB()) + " -> " + formatStack(offer.getResult());
+    private static MutableComponent formatRecordedOffer(MerchantOffer offer) {
+        return formatCost(offer.getBaseCostA(), offer.getCostB())
+                .append(Component.literal(" -> ")).append(formatStack(offer.getResult()));
     }
 
-    private static String formatLivePriceSuffix(MerchantOffer recordedOffer, MerchantOffer liveOffer) {
+    private static Component formatLivePriceSuffix(MerchantOffer recordedOffer, MerchantOffer liveOffer) {
         if (liveOffer == null || !sameResult(recordedOffer, liveOffer) || !hasDifferentCurrentPrice(recordedOffer, liveOffer)) {
-            return "";
+            return Component.empty();
         }
-        return " (目前 " + formatCost(liveOffer.getCostA(), liveOffer.getCostB()) + ")";
+        return Component.translatable("command.dgutweak.detail.live_price",
+                formatCost(liveOffer.getCostA(), liveOffer.getCostB()));
     }
 
     private static boolean hasDifferentCurrentPrice(MerchantOffer recordedOffer, MerchantOffer liveOffer) {
@@ -255,16 +265,28 @@ public class DGuTweakCommand {
                 && first.getHoverName().getString().equals(second.getHoverName().getString());
     }
 
-    private static String formatCost(ItemStack costA, ItemStack costB) {
-        StringBuilder line = new StringBuilder(formatStack(costA));
+    private static MutableComponent formatCost(ItemStack costA, ItemStack costB) {
+        MutableComponent line = formatStack(costA);
         if (!costB.isEmpty()) {
-            line.append(" + ").append(formatStack(costB));
+            line.append(Component.literal(" + ")).append(formatStack(costB));
         }
-        return line.toString();
+        return line;
     }
 
-    private static String formatStack(ItemStack stack) {
-        return stack.getCount() + "x " + stack.getHoverName().getString();
+    private static MutableComponent formatStack(ItemStack stack) {
+        MutableComponent result = Component.literal(stack.getCount() + "x ").append(stack.getHoverName());
+        ItemEnchantments enchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
+        if (enchantments == null || enchantments.isEmpty()) enchantments = stack.getEnchantments();
+        if (enchantments != null && !enchantments.isEmpty()) {
+            result.append(Component.literal(": "));
+            boolean first = true;
+            for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<net.minecraft.core.Holder<Enchantment>> entry : enchantments.entrySet()) {
+                if (!first) result.append(Component.literal(", "));
+                result.append(Enchantment.getFullname(entry.getKey(), entry.getIntValue()));
+                first = false;
+            }
+        }
+        return result;
     }
 
     private static Vec3 posCenter(RecordedVillagersData.VillagerRecord record) {
@@ -273,5 +295,11 @@ public class DGuTweakCommand {
 
     private static String formatPos(RecordedVillagersData.VillagerRecord record) {
         return record.pos().getX() + ", " + record.pos().getY() + ", " + record.pos().getZ();
+    }
+
+    private static Component professionComponent(String profession) {
+        return Component.translatable(profession.equals("wandering_trader")
+                ? "entity.minecraft.wandering_trader"
+                : "entity.minecraft.villager." + profession);
     }
 }

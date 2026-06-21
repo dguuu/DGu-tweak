@@ -46,6 +46,7 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
             int level,
             String resultName,
             String resultTranslationKey,
+            List<EnchantmentData> resultEnchantments,
             int resultCount,
             String costAName,
             String costATranslationKey,
@@ -67,6 +68,7 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
                     buffer.readVarInt(),
                     buffer.readUtf(),
                     buffer.readUtf(),
+                    readEnchantments(buffer),
                     buffer.readVarInt(),
                     buffer.readUtf(),
                     buffer.readUtf(),
@@ -89,6 +91,7 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
             buffer.writeVarInt(level);
             buffer.writeUtf(resultName);
             buffer.writeUtf(resultTranslationKey);
+            writeEnchantments(buffer, resultEnchantments);
             buffer.writeVarInt(resultCount);
             buffer.writeUtf(costAName);
             buffer.writeUtf(costATranslationKey);
@@ -101,5 +104,24 @@ public record TradeListS2CPayload(List<Entry> entries) implements CustomPacketPa
             buffer.writeBoolean(live);
             buffer.writeDouble(distance);
         }
+
+        private static List<EnchantmentData> readEnchantments(RegistryFriendlyByteBuf buffer) {
+            int size = buffer.readVarInt();
+            List<EnchantmentData> enchantments = new ArrayList<>(size);
+            for (int index = 0; index < size; index++) {
+                enchantments.add(new EnchantmentData(Identifier.STREAM_CODEC.decode(buffer), buffer.readVarInt()));
+            }
+            return List.copyOf(enchantments);
+        }
+
+        private static void writeEnchantments(RegistryFriendlyByteBuf buffer, List<EnchantmentData> enchantments) {
+            buffer.writeVarInt(enchantments.size());
+            for (EnchantmentData enchantment : enchantments) {
+                Identifier.STREAM_CODEC.encode(buffer, enchantment.id());
+                buffer.writeVarInt(enchantment.level());
+            }
+        }
     }
+
+    public record EnchantmentData(Identifier id, int level) { }
 }

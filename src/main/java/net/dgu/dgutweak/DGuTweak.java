@@ -78,7 +78,7 @@ public class DGuTweak implements ModInitializer {
             if (lockedOffers == null && villager.getVillagerData().level() < 5 && attemptsRemaining > 0) {
                 queuePendingRecord(player, entityId, attemptsRemaining - 1);
                 if (!retry) {
-                    player.sendSystemMessage(Component.literal("[DGu-tweak] Visible Traders locked trades are still generating; recording will finish shortly."));
+                    player.sendSystemMessage(Component.translatable("message.dgutweak.record.pending"));
                 }
                 return;
             }
@@ -103,11 +103,11 @@ public class DGuTweak implements ModInitializer {
                     recordedBy
             ));
 
-            player.sendSystemMessage(Component.literal(result == RecordedVillagersData.RecordResult.ADDED
-                    ? "[DGu-tweak] Recorded villager."
-                    : "[DGu-tweak] Updated villager record."));
+            player.sendSystemMessage(Component.translatable(result == RecordedVillagersData.RecordResult.ADDED
+                    ? "message.dgutweak.record.villager_added"
+                    : "message.dgutweak.record.villager_updated"));
             if (lockedOffers.isEmpty() && villagerLevel < 5) {
-                player.sendSystemMessage(Component.literal("[DGu-tweak] Warning: locked trades were still empty after waiting."));
+                player.sendSystemMessage(Component.translatable("message.dgutweak.record.locked_empty"));
             }
             LOGGER.info("Recorded villager {} ({}, level {}) by {}", villager.getUUID(), profession, villagerLevel, recordedBy);
             return;
@@ -126,9 +126,9 @@ public class DGuTweak implements ModInitializer {
                     recordedBy
             ));
 
-            player.sendSystemMessage(Component.literal(result == RecordedVillagersData.RecordResult.ADDED
-                    ? "[DGu-tweak] Recorded wandering trader."
-                    : "[DGu-tweak] Updated wandering trader record."));
+            player.sendSystemMessage(Component.translatable(result == RecordedVillagersData.RecordResult.ADDED
+                    ? "message.dgutweak.record.trader_added"
+                    : "message.dgutweak.record.trader_updated"));
             LOGGER.info("Recorded wandering trader {} by {}", trader.getUUID(), recordedBy);
         }
     }
@@ -185,6 +185,7 @@ public class DGuTweak implements ModInitializer {
                     record.level(),
                     stackName(offer.getResult()),
                     translationKey(offer.getResult()),
+                    enchantmentData(offer.getResult()),
                     offer.getResult().getCount(),
                     stackName(offer.getBaseCostA()),
                     translationKey(offer.getBaseCostA()),
@@ -209,9 +210,9 @@ public class DGuTweak implements ModInitializer {
                 if (glow) {
                     villager.setGlowingTag(false);
                     villager.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, true));
-                    player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted villager for 20 seconds."));
+                    player.sendSystemMessage(Component.translatable("message.dgutweak.locate.highlighted"));
                 } else {
-                    player.sendSystemMessage(Component.literal("[DGu-tweak] Updated villager position."));
+                    player.sendSystemMessage(Component.translatable("message.dgutweak.locate.updated"));
                 }
                 sendTradeList(player);
                 return;
@@ -221,15 +222,15 @@ public class DGuTweak implements ModInitializer {
                 if (glow) {
                     trader.setGlowingTag(false);
                     trader.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0, false, true));
-                    player.sendSystemMessage(Component.literal("[DGu-tweak] Highlighted wandering trader for 20 seconds."));
+                    player.sendSystemMessage(Component.translatable("message.dgutweak.locate.highlighted"));
                 } else {
-                    player.sendSystemMessage(Component.literal("[DGu-tweak] Updated wandering trader position."));
+                    player.sendSystemMessage(Component.translatable("message.dgutweak.locate.updated"));
                 }
                 sendTradeList(player);
                 return;
             }
         }
-        player.sendSystemMessage(Component.literal("[DGu-tweak] Merchant is not loaded. Use Track/coordinates to navigate closer."));
+        player.sendSystemMessage(Component.translatable("message.dgutweak.locate.not_loaded"));
     }
 
     private static void updateRecordedPosition(Entity entity) {
@@ -273,29 +274,28 @@ public class DGuTweak implements ModInitializer {
     }
 
     private static String stackName(ItemStack stack) {
-        String name = stack.getHoverName().getString();
-        String enchantments = enchantmentText(stack);
-        return enchantments.isEmpty() ? name : name + ": " + enchantments;
+        return stack.getHoverName().getString();
     }
 
     private static String translationKey(ItemStack stack) {
         return stack.isEmpty() ? "" : stack.getItem().getDescriptionId();
     }
 
-    private static String enchantmentText(ItemStack stack) {
+    private static List<TradeListS2CPayload.EnchantmentData> enchantmentData(ItemStack stack) {
         ItemEnchantments enchantments = stack.get(DataComponents.STORED_ENCHANTMENTS);
         if (enchantments == null || enchantments.isEmpty()) {
             enchantments = stack.getEnchantments();
         }
         if (enchantments == null || enchantments.isEmpty()) {
-            return "";
+            return List.of();
         }
 
-        List<String> lines = new ArrayList<>();
+        List<TradeListS2CPayload.EnchantmentData> result = new ArrayList<>();
         for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<net.minecraft.core.Holder<Enchantment>> entry : enchantments.entrySet()) {
-            lines.add(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).getString());
+            entry.getKey().unwrapKey().ifPresent(key -> result.add(
+                    new TradeListS2CPayload.EnchantmentData(key.identifier(), entry.getIntValue())));
         }
-        return String.join(", ", lines);
+        return List.copyOf(result);
     }
 
     private static MerchantOffers getVisibleTradersLockedOffers(Villager villager) {
