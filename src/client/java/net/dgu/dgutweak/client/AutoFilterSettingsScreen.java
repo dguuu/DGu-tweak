@@ -83,8 +83,15 @@ public class AutoFilterSettingsScreen extends Screen {
             Button enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
                             button -> openEnchantments(slot))
                     .pos(left + panelWidth - 96, y).size(36, 19).build();
+            enchantmentButton.active = selected.id() != null
+                    && ItemEnchantmentsScreen.canHaveEnchantments(selected.id());
             addRenderableWidget(enchantmentButton);
             row.enchantmentButton = enchantmentButton;
+            targetDropdown.setOnSelect(value -> {
+                row.enchantments = List.of();
+                enchantmentButton.active = value.id() != null
+                        && ItemEnchantmentsScreen.canHaveEnchantments(value.id());
+            });
         }
         updateVisibleRows();
 
@@ -291,7 +298,7 @@ public class AutoFilterSettingsScreen extends Screen {
 
         private final Button button;
         private final List<Option<T>> options;
-        private final Consumer<T> onSelect;
+        private Consumer<T> onSelect;
         private int selectedIndex;
         private int scrollOffset;
 
@@ -310,6 +317,10 @@ public class AutoFilterSettingsScreen extends Screen {
 
         private T value() {
             return options.get(selectedIndex).value();
+        }
+
+        private void setOnSelect(Consumer<T> onSelect) {
+            this.onSelect = onSelect;
         }
 
         private int findIndex(T selected) {

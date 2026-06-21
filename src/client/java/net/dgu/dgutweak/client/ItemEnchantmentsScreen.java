@@ -163,6 +163,17 @@ public class ItemEnchantmentsScreen extends Screen {
         return options;
     }
 
+    static boolean canHaveEnchantments(Identifier targetItem) {
+        Item item = BuiltInRegistries.ITEM.getValue(targetItem);
+        ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
+        if (stack.is(Items.ENCHANTED_BOOK)) {
+            return true;
+        }
+        Minecraft client = Minecraft.getInstance();
+        return client.level != null && client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
+                .anyMatch(holder -> holder.is(EnchantmentTags.TRADEABLE) && holder.value().canEnchant(stack));
+    }
+
     private record Row(Dropdown dropdown, EditBox level) { }
     private record Option(Identifier id, Component label, int maxLevel) { }
 
