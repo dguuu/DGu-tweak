@@ -2,6 +2,7 @@ package net.dgu.dgutweak.client.mixins;
 
 import net.dgu.dgutweak.client.DGuTweakClient;
 import net.dgu.dgutweak.client.AutoVillagerFilter;
+import net.dgu.dgutweak.client.BestTradeEnchantmentsScreen;
 import net.dgu.dgutweak.networking.RecordVillagerC2SPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -65,6 +66,14 @@ public abstract class MerchantScreenRecordMixin extends AbstractContainerScreen<
                         button -> AutoVillagerFilter.openSettings())
                 .pos(buttonX + 82, buttonY + 15)
                 .size(40, 14)
+                .build());
+
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("gui.dgutweak.best_enchantments"),
+                        button -> Minecraft.getInstance().setScreen(
+                                new BestTradeEnchantmentsScreen((MerchantScreen) (Object) this)))
+                .pos(buttonX, buttonY + 30)
+                .size(122, 14)
                 .build());
     }
 

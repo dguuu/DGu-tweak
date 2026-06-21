@@ -208,6 +208,26 @@ public class ItemEnchantmentsScreen extends Screen {
                 .anyMatch(holder -> canRollLevel(holder.value(), requirement.level(), maxModifiedPower));
     }
 
+    static int highestPossibleTradeLevel(Identifier targetItem, Identifier enchantmentId) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
+            return 0;
+        }
+        return client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
+                .filter(holder -> holder.key().identifier().equals(enchantmentId))
+                .mapToInt(holder -> {
+                    for (int level = holder.value().getMaxLevel(); level >= holder.value().getMinLevel(); level--) {
+                        if (isPossibleTradeEnchantment(targetItem,
+                                new AutoVillagerFilter.EnchantmentRequirement(enchantmentId, level))) {
+                            return level;
+                        }
+                    }
+                    return 0;
+                })
+                .findFirst()
+                .orElse(0);
+    }
+
     private static boolean canRollLevel(Enchantment enchantment, int requestedLevel, int maxPower) {
         for (int power = 5; power <= maxPower; power++) {
             for (int level = enchantment.getMaxLevel(); level >= enchantment.getMinLevel(); level--) {
