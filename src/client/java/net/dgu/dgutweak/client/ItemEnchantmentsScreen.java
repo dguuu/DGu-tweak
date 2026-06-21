@@ -11,9 +11,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.EnchantmentTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -153,8 +155,11 @@ public class ItemEnchantmentsScreen extends Screen {
             Item item = BuiltInRegistries.ITEM.getValue(targetItem);
             ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
             boolean enchantedBook = stack.is(Items.ENCHANTED_BOOK);
+            TagKey<Enchantment> allowedEnchantments = enchantedBook
+                    ? EnchantmentTags.TRADEABLE
+                    : EnchantmentTags.ON_TRADED_EQUIPMENT;
             client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
-                    .filter(holder -> holder.is(EnchantmentTags.TRADEABLE)
+                    .filter(holder -> holder.is(allowedEnchantments)
                             && (enchantedBook || holder.value().canEnchant(stack)))
                     .sorted(Comparator.comparing(holder -> holder.value().description().getString()))
                     .forEach(holder -> options.add(new Option(
@@ -171,7 +176,8 @@ public class ItemEnchantmentsScreen extends Screen {
         }
         Minecraft client = Minecraft.getInstance();
         return client.level != null && client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements()
-                .anyMatch(holder -> holder.is(EnchantmentTags.TRADEABLE) && holder.value().canEnchant(stack));
+                .anyMatch(holder -> holder.is(EnchantmentTags.ON_TRADED_EQUIPMENT)
+                        && holder.value().canEnchant(stack));
     }
 
     private record Row(Dropdown dropdown, EditBox level) { }
