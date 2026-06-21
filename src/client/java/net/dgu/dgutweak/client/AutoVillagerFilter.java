@@ -1,13 +1,10 @@
 package net.dgu.dgutweak.client;
 
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,7 +19,6 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.entity.npc.villager.Villager;
-import org.lwjgl.glfw.GLFW;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -39,12 +35,6 @@ public final class AutoVillagerFilter {
     );
     private static List<Target> targets = new ArrayList<>(DEFAULT_TARGETS);
 
-    private static final KeyMapping TOGGLE_KEY = new KeyMapping(
-            "key.dgutweak.auto_filter",
-            GLFW.GLFW_KEY_V,
-            KeyMapping.Category.INVENTORY
-    );
-
     private static boolean active;
     private static boolean awaitingResponse;
     private static int ticksUntilCycle;
@@ -58,14 +48,7 @@ public final class AutoVillagerFilter {
 
     public static void initialize() {
         targets = new ArrayList<>(AutoFilterConfig.load(DEFAULT_TARGETS));
-        KeyBindingHelper.registerKeyBinding(TOGGLE_KEY);
         ClientTickEvents.END_CLIENT_TICK.register(AutoVillagerFilter::tick);
-    }
-
-    public static void onKey(KeyEvent event, int action) {
-        if (action == GLFW.GLFW_PRESS && TOGGLE_KEY.matches(event)) {
-            toggle();
-        }
     }
 
     public static void bindButton(Button button) {
