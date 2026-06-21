@@ -26,7 +26,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ItemEnchantmentsScreen extends Screen {
-    private static final int MAX_ENCHANTMENTS = 5;
+    private static final int MAX_ENCHANTMENTS = 6;
     private static final int VISIBLE_ENCHANTMENTS = 3;
     private final Screen parent;
     private final Identifier targetItem;
