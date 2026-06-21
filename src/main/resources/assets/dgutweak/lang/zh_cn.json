@@ -15,6 +15,7 @@
   "gui.dgutweak.auto_filter.cancel": "取消",
   "gui.dgutweak.auto_filter.invalid": "附魔 ID、等级或价格格式错误。",
   "gui.dgutweak.auto_filter.empty": "请至少设置一个条件。",
+  "gui.dgutweak.auto_filter.select_item_first": "请先选择目标物品。",
   "message.dgutweak.auto_filter.enabled": "[DGu-tweak] 已启用村民交易自动筛选器。",
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] 已停用村民交易自动筛选器。",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] 交易界面已关闭，已停止自动筛选。",

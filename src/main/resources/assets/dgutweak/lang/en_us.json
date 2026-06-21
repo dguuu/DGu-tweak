@@ -26,6 +26,7 @@
   "gui.dgutweak.auto_filter.cancel": "Cancel",
   "gui.dgutweak.auto_filter.invalid": "Invalid ID, level, or price.",
   "gui.dgutweak.auto_filter.empty": "Configure at least one target.",
+  "gui.dgutweak.auto_filter.select_item_first": "Select an item first.",
   "message.dgutweak.auto_filter.enabled": "[DGu-tweak] Auto villager filter enabled.",
   "message.dgutweak.auto_filter.disabled": "[DGu-tweak] Auto villager filter disabled.",
   "message.dgutweak.auto_filter.closed": "[DGu-tweak] Auto villager filter stopped because the trade screen was closed.",

@@ -28,6 +28,7 @@ public class AutoFilterSettingsScreen extends Screen {
     private Dropdown<?> openDropdown;
     private int scrollOffset;
     private int rowsTop;
+    private List<AutoVillagerFilter.Target> stagedTargets;
 
     public AutoFilterSettingsScreen(Screen parent) {
         this(parent, currentProfession());
@@ -54,14 +55,20 @@ public class AutoFilterSettingsScreen extends Screen {
                 professionOptions, profession,
                 value -> Minecraft.getInstance().setScreen(new AutoFilterSettingsScreen(parent, value))));
 
-        List<AutoVillagerFilter.Target> saved = AutoVillagerFilter.targets().stream()
-                .filter(target -> target.profession().equals(profession))
-                .limit(MAX_TARGETS)
-                .toList();
+        if (stagedTargets == null) {
+            List<AutoVillagerFilter.Target> saved = AutoVillagerFilter.targets().stream()
+                    .filter(target -> target.profession().equals(profession))
+                    .limit(MAX_TARGETS)
+                    .toList();
+            stagedTargets = new ArrayList<>(MAX_TARGETS);
+            for (int index = 0; index < MAX_TARGETS; index++) {
+                stagedTargets.add(index < saved.size() ? saved.get(index) : null);
+            }
+        }
         List<Choice> choices = profession.equals("librarian") ? enchantmentChoices() : itemChoices();
 
         for (int index = 0; index < MAX_TARGETS; index++) {
-            AutoVillagerFilter.Target target = index < saved.size() ? saved.get(index) : null;
+            AutoVillagerFilter.Target target = stagedTargets.get(index);
             Choice selected = findChoice(choices, target);
             int y = rowsTop + index * 23;
             Dropdown<Choice> targetDropdown = new Dropdown<>(left + 10, y, panelWidth - 112, 19,
@@ -82,9 +89,9 @@ public class AutoFilterSettingsScreen extends Screen {
             if (profession.equals("librarian")) {
                 addRenderableWidget(level);
             } else {
+                int slot = index;
                 enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
-                                button -> Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, row.enchantments,
-                                        enchantments -> row.enchantments = enchantments)))
+                                button -> openEnchantments(slot))
                         .pos(left + panelWidth - 96, y).size(36, 19).build();
                 addRenderableWidget(enchantmentButton);
             }
@@ -174,32 +181,67 @@ public class AutoFilterSettingsScreen extends Screen {
     }
 
     private void save() {
+        if (!syncRowsToStage()) {
+            return;
+        }
         List<AutoVillagerFilter.Target> targets = new ArrayList<>(AutoVillagerFilter.targets());
         targets.removeIf(target -> target.profession().equals(profession));
+        for (AutoVillagerFilter.Target target : stagedTargets) {
+            if (target != null) {
+                targets.add(target);
+            }
+        }
+        AutoVillagerFilter.setTargets(targets);
+        onClose();
+    }
+
+    private void openEnchantments(int slot) {
+        if (!syncRowsToStage()) {
+            return;
+        }
+        AutoVillagerFilter.Target target = stagedTargets.get(slot);
+        if (target == null) {
+            error = Component.translatable("gui.dgutweak.auto_filter.select_item_first");
+            return;
+        }
+        Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, target.enchantments(), enchantments -> {
+            AutoVillagerFilter.Target current = stagedTargets.get(slot);
+            stagedTargets.set(slot, new AutoVillagerFilter.Target(
+                    current.profession(), current.resultItem(), enchantments, current.maxEmeraldPrice()));
+        }));
+    }
+
+    private boolean syncRowsToStage() {
         try {
-            for (TargetRow row : rows) {
+            for (int index = 0; index < rows.size(); index++) {
+                TargetRow row = rows.get(index);
                 Choice choice = row.target().value();
                 if (choice.id() == null) {
+                    stagedTargets.set(index, null);
                     continue;
                 }
                 int level = profession.equals("librarian") ? Integer.parseInt(row.level().getValue().trim()) : 0;
                 int price = Integer.parseInt(row.price().getValue().trim());
-                if (level < 0 || price <= 0) {
+                if ((profession.equals("librarian") && level <= 0) || price <= 0) {
                     throw new NumberFormatException();
                 }
                 List<AutoVillagerFilter.EnchantmentRequirement> enchantments = profession.equals("librarian")
                         ? List.of(new AutoVillagerFilter.EnchantmentRequirement(choice.id(), level))
                         : row.enchantments;
-                targets.add(new AutoVillagerFilter.Target(profession,
-                        profession.equals("librarian") ? Identifier.fromNamespaceAndPath("minecraft", "enchanted_book") : choice.id(),
-                        enchantments, price));
+                stagedTargets.set(index, new AutoVillagerFilter.Target(
+                        profession,
+                        profession.equals("librarian")
+                                ? Identifier.fromNamespaceAndPath("minecraft", "enchanted_book")
+                                : choice.id(),
+                        enchantments,
+                        price));
             }
+            error = null;
+            return true;
         } catch (NumberFormatException exception) {
             error = Component.translatable("gui.dgutweak.auto_filter.invalid");
-            return;
+            return false;
         }
-        AutoVillagerFilter.setTargets(targets);
-        onClose();
     }
 
     private List<Choice> itemChoices() {
