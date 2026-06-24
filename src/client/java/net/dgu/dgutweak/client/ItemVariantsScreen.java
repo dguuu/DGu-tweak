@@ -14,21 +14,15 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ItemVariantsScreen extends Screen {
-    private static final int MAX_VARIANTS = 6;
-    private static final int VISIBLE_VARIANTS = 3;
-
     private final Screen parent;
     private final Identifier group;
     private final List<Identifier> initial;
     private final Consumer<List<Identifier>> onSave;
-    private final List<Dropdown> rows = new ArrayList<>();
-    private Dropdown openDropdown;
-    private int scrollOffset;
-    private int rowsTop;
+    private Dropdown dropdown;
 
     public ItemVariantsScreen(Screen parent, Identifier group, List<Identifier> initial,
                               Consumer<List<Identifier>> onSave) {
-        super(Component.literal("Colors"));
+        super(Component.translatable("gui.dgutweak.auto_filter.colors.title"));
         this.parent = parent;
         this.group = group;
         this.initial = List.copyOf(initial);
@@ -37,27 +31,21 @@ public class ItemVariantsScreen extends Screen {
 
     @Override
     protected void init() {
-        rows.clear();
         int panelWidth = Math.min(260, width - 20);
         int left = (width - panelWidth) / 2;
-        int top = Math.max(8, (height - 125) / 2);
-        rowsTop = top + 35;
+        int top = Math.max(8, (height - 105) / 2);
         List<Option> options = variantOptions();
-        for (int index = 0; index < MAX_VARIANTS; index++) {
-            Identifier saved = index < initial.size() ? initial.get(index) : null;
-            Option selected = options.stream()
-                    .filter(option -> Objects.equals(option.id(), saved))
-                    .findFirst()
-                    .orElse(options.get(0));
-            Dropdown dropdown = new Dropdown(left + 10, rowsTop + index * 24, panelWidth - 20, 20, options, selected);
-            addRenderableWidget(dropdown.button);
-            rows.add(dropdown);
-        }
-        updateVisibleRows();
+        Identifier saved = initial.isEmpty() ? null : initial.get(0);
+        Option selected = options.stream()
+                .filter(option -> Objects.equals(option.id(), saved))
+                .findFirst()
+                .orElse(options.get(0));
+        dropdown = new Dropdown(left + 10, top + 36, panelWidth - 20, 20, options, selected);
+        addRenderableWidget(dropdown.button);
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.save"), button -> save())
-                .pos(width / 2 - 82, top + 90).size(78, 20).build());
+                .pos(width / 2 - 82, top + 72).size(78, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.cancel"), button -> onClose())
-                .pos(width / 2 + 4, top + 90).size(78, 20).build());
+                .pos(width / 2 + 4, top + 72).size(78, 20).build());
     }
 
     @Override
@@ -65,25 +53,22 @@ public class ItemVariantsScreen extends Screen {
         graphics.fill(0, 0, width, height, 0xCC101010);
         int panelWidth = Math.min(260, width - 20);
         int left = (width - panelWidth) / 2;
-        int top = Math.max(8, (height - 125) / 2);
-        graphics.fill(left, top, left + panelWidth, top + 120, 0xF0202020);
+        int top = Math.max(8, (height - 105) / 2);
+        graphics.fill(left, top, left + panelWidth, top + 100, 0xF0202020);
         graphics.drawCenteredString(font, title, width / 2, top + 10, 0xFFFFFFFF);
-        graphics.drawCenteredString(font,
-                (scrollOffset + 1) + "-" + Math.min(scrollOffset + VISIBLE_VARIANTS, MAX_VARIANTS) + " / " + MAX_VARIANTS,
-                width / 2, top + 80, 0xFF888888);
         super.render(graphics, mouseX, mouseY, partialTick);
-        if (openDropdown != null) {
-            openDropdown.renderList(graphics, mouseX, mouseY);
+        if (dropdown != null && dropdown.open) {
+            dropdown.renderList(graphics, mouseX, mouseY);
         }
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (openDropdown != null) {
-            if (openDropdown.click(event.x(), event.y())) {
+        if (dropdown != null && dropdown.open) {
+            if (dropdown.click(event.x(), event.y())) {
                 return true;
             }
-            openDropdown = null;
+            dropdown.open = false;
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -91,15 +76,8 @@ public class ItemVariantsScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (openDropdown != null) {
-            return openDropdown.scroll(scrollY);
-        }
-        int nextOffset = Math.max(0, Math.min(MAX_VARIANTS - VISIBLE_VARIANTS,
-                scrollOffset - (int) Math.signum(scrollY)));
-        if (nextOffset != scrollOffset) {
-            scrollOffset = nextOffset;
-            updateVisibleRows();
-            return true;
+        if (dropdown != null && dropdown.open) {
+            return dropdown.scroll(scrollY);
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
@@ -109,22 +87,11 @@ public class ItemVariantsScreen extends Screen {
         Minecraft.getInstance().setScreen(parent);
     }
 
-    private void updateVisibleRows() {
-        for (int index = 0; index < rows.size(); index++) {
-            Dropdown row = rows.get(index);
-            boolean visible = index >= scrollOffset && index < scrollOffset + VISIBLE_VARIANTS;
-            row.button.visible = visible;
-            row.button.setY(rowsTop + (index - scrollOffset) * 24);
-        }
-    }
-
     private void save() {
         List<Identifier> variants = new ArrayList<>();
-        for (Dropdown row : rows) {
-            Identifier id = row.value().id();
-            if (id != null && !variants.contains(id)) {
-                variants.add(id);
-            }
+        Identifier id = dropdown.value().id();
+        if (id != null) {
+            variants.add(id);
         }
         onSave.accept(variants);
         onClose();
@@ -149,12 +116,13 @@ public class ItemVariantsScreen extends Screen {
         private final List<Option> options;
         private int selected;
         private int offset;
+        private boolean open;
 
         private Dropdown(int x, int y, int width, int height, List<Option> options, Option selected) {
             this.options = options;
             this.selected = Math.max(0, options.indexOf(selected));
             this.button = Button.builder(options.get(this.selected).label(), ignored -> {
-                openDropdown = openDropdown == this ? null : this;
+                open = !open;
                 offset = Math.max(0, Math.min(this.selected, options.size() - visibleRows()));
             }).pos(x, y).size(width, height).build();
         }
@@ -192,7 +160,7 @@ public class ItemVariantsScreen extends Screen {
         private boolean click(double x, double y) {
             if (x >= button.getX() && x < button.getX() + button.getWidth()
                     && y >= button.getY() && y < button.getY() + button.getHeight()) {
-                openDropdown = null;
+                open = false;
                 return true;
             }
             int listY = listY();
@@ -204,7 +172,7 @@ public class ItemVariantsScreen extends Screen {
             if (index < options.size()) {
                 selected = index;
                 button.setMessage(options.get(index).label());
-                openDropdown = null;
+                open = false;
             }
             return true;
         }

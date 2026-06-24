@@ -64,7 +64,7 @@ final class ProfessionTradeCatalog {
             return new Choice(TERRACOTTA_GROUP, Component.translatable("block.minecraft.terracotta"));
         }
         if ("glazed_terracotta".equals(path)) {
-            return new Choice(GLAZED_TERRACOTTA_GROUP, Component.literal("Glazed Terracotta"));
+            return new Choice(GLAZED_TERRACOTTA_GROUP, Component.translatable("gui.dgutweak.auto_filter.glazed_terracotta"));
         }
         Identifier id = Identifier.fromNamespaceAndPath("minecraft", path);
         Item item = BuiltInRegistries.ITEM.getValue(id);

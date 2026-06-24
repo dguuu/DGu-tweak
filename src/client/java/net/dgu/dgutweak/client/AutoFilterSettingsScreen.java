@@ -117,7 +117,7 @@ public class AutoFilterSettingsScreen extends Screen {
         int top = Math.max(5, (this.height - 194) / 2);
         graphics.fill(left, top, left + panelWidth, top + 188, 0xF0202020);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
-        graphics.drawString(this.font, Component.literal("Success"), left + 10, top + 55, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.required_matches"), left + 10, top + 55, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.item"), left + 10, top + 75, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.enchantments"), left + panelWidth - 96, top + 75, 0xFFAAAAAA);
         graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.price"), left + panelWidth - 54, top + 75, 0xFFAAAAAA);
@@ -283,7 +283,7 @@ public class AutoFilterSettingsScreen extends Screen {
 
     private static Component modifierLabel(Identifier id) {
         return ProfessionTradeCatalog.isVariantGroup(id)
-                ? Component.literal("Color")
+                ? Component.translatable("gui.dgutweak.auto_filter.color")
                 : Component.translatable("gui.dgutweak.auto_filter.enchantments");
     }
 
