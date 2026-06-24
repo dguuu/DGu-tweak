@@ -10,6 +10,19 @@ import java.util.List;
 import java.util.Map;
 
 final class ProfessionTradeCatalog {
+    static final Identifier TERRACOTTA_GROUP = Identifier.fromNamespaceAndPath("dgutweak", "terracotta");
+    static final Identifier GLAZED_TERRACOTTA_GROUP = Identifier.fromNamespaceAndPath("dgutweak", "glazed_terracotta");
+    static final List<String> COLORS = List.of(
+            "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+            "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+    );
+    static final List<Identifier> TERRACOTTA_VARIANTS = COLORS.stream()
+            .map(color -> Identifier.fromNamespaceAndPath("minecraft", color + "_terracotta"))
+            .toList();
+    static final List<Identifier> GLAZED_TERRACOTTA_VARIANTS = COLORS.stream()
+            .map(color -> Identifier.fromNamespaceAndPath("minecraft", color + "_glazed_terracotta"))
+            .toList();
+
     static final List<String> PROFESSIONS = List.of(
             "armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman", "fletcher",
             "leatherworker", "librarian", "mason", "shepherd", "toolsmith", "weaponsmith"
@@ -27,7 +40,7 @@ final class ProfessionTradeCatalog {
         put("fletcher", "arrow", "flint", "bow", "crossbow", "tipped_arrow");
         put("leatherworker", "leather_helmet", "leather_chestplate", "leather_leggings", "leather_boots", "leather_horse_armor", "saddle");
         put("librarian", "enchanted_book", "bookshelf", "lantern", "glass", "clock", "compass", "name_tag");
-        put("mason", "brick", "chiseled_stone_bricks", "dripstone_block", "polished_andesite", "polished_diorite", "polished_granite", "terracotta", "quartz_block", "quartz_pillar");
+        put("mason", "brick", "chiseled_stone_bricks", "dripstone_block", "polished_andesite", "polished_diorite", "polished_granite", "terracotta", "glazed_terracotta", "quartz_block", "quartz_pillar");
         put("shepherd", "shears", "white_wool", "white_carpet", "white_bed", "white_banner", "painting");
         put("toolsmith", "stone_axe", "stone_shovel", "stone_pickaxe", "stone_hoe", "iron_axe", "iron_shovel", "iron_pickaxe", "diamond_axe", "diamond_shovel", "diamond_pickaxe", "diamond_hoe", "bell");
         put("weaponsmith", "iron_axe", "iron_sword", "diamond_axe", "diamond_sword", "bell");
@@ -47,9 +60,38 @@ final class ProfessionTradeCatalog {
     }
 
     static Choice choice(String path) {
+        if ("terracotta".equals(path)) {
+            return new Choice(TERRACOTTA_GROUP, Component.translatable("block.minecraft.terracotta"));
+        }
+        if ("glazed_terracotta".equals(path)) {
+            return new Choice(GLAZED_TERRACOTTA_GROUP, Component.literal("Glazed Terracotta"));
+        }
         Identifier id = Identifier.fromNamespaceAndPath("minecraft", path);
         Item item = BuiltInRegistries.ITEM.getValue(id);
         return new Choice(id, item == null ? Component.literal(path) : item.getName());
+    }
+
+    static boolean isVariantGroup(Identifier id) {
+        return TERRACOTTA_GROUP.equals(id) || GLAZED_TERRACOTTA_GROUP.equals(id);
+    }
+
+    static boolean matchesVariantGroup(Identifier group, Identifier item) {
+        return variants(group).contains(item);
+    }
+
+    static List<Identifier> variants(Identifier group) {
+        if (TERRACOTTA_GROUP.equals(group)) {
+            return TERRACOTTA_VARIANTS;
+        }
+        if (GLAZED_TERRACOTTA_GROUP.equals(group)) {
+            return GLAZED_TERRACOTTA_VARIANTS;
+        }
+        return List.of();
+    }
+
+    static Component variantName(Identifier id) {
+        Item item = BuiltInRegistries.ITEM.getValue(id);
+        return item == null ? Component.literal(id.getPath()) : item.getName();
     }
 
     private static void put(String profession, String... items) {

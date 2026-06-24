@@ -27,6 +27,7 @@ public class AutoFilterSettingsScreen extends Screen {
     private int scrollOffset;
     private int rowsTop;
     private List<AutoVillagerFilter.Target> stagedTargets;
+    private EditBox requiredMatches;
 
     public AutoFilterSettingsScreen(Screen parent) {
         this(parent, currentProfession());
@@ -41,10 +42,10 @@ public class AutoFilterSettingsScreen extends Screen {
     @Override
     protected void init() {
         rows.clear();
-        int panelWidth = Math.min(340, this.width - 20);
+        int panelWidth = Math.min(350, this.width - 20);
         int left = (this.width - panelWidth) / 2;
-        int top = Math.max(5, (this.height - 174) / 2);
-        rowsTop = top + 68;
+        int top = Math.max(5, (this.height - 194) / 2);
+        rowsTop = top + 88;
 
         List<Option<String>> professionOptions = ProfessionTradeCatalog.PROFESSIONS.stream()
                 .map(value -> new Option<>(value, ProfessionTradeCatalog.professionName(value)))
@@ -63,6 +64,11 @@ public class AutoFilterSettingsScreen extends Screen {
                 stagedTargets.add(index < saved.size() ? saved.get(index) : null);
             }
         }
+        int configuredTargets = (int) stagedTargets.stream().filter(Objects::nonNull).count();
+        requiredMatches = new EditBox(this.font, left + panelWidth - 54, top + 50, 44, 19, Component.literal("1"));
+        requiredMatches.setMaxLength(1);
+        requiredMatches.setValue(Integer.toString(AutoVillagerFilter.requiredMatches(profession, Math.max(1, configuredTargets))));
+        addRenderableWidget(requiredMatches);
         List<Choice> choices = itemChoices();
 
         for (int index = 0; index < MAX_TARGETS; index++) {
@@ -77,25 +83,26 @@ public class AutoFilterSettingsScreen extends Screen {
             addDropdown(targetDropdown);
             addRenderableWidget(price);
             TargetRow row = new TargetRow(targetDropdown, price,
-                    target == null ? List.of() : target.enchantments());
+                    target == null ? List.of() : target.enchantments(),
+                    target == null ? List.of() : target.variants());
             rows.add(row);
             int slot = index;
-            Button enchantmentButton = Button.builder(Component.translatable("gui.dgutweak.auto_filter.enchantments"),
-                            button -> openEnchantments(slot))
+            Button enchantmentButton = Button.builder(modifierLabel(selected.id()),
+                            button -> openModifiers(slot))
                     .pos(left + panelWidth - 96, y).size(36, 19).build();
-            enchantmentButton.active = selected.id() != null
-                    && ItemEnchantmentsScreen.canHaveEnchantments(selected.id());
+            enchantmentButton.active = canConfigureModifiers(selected.id());
             addRenderableWidget(enchantmentButton);
             row.enchantmentButton = enchantmentButton;
             targetDropdown.setOnSelect(value -> {
                 row.enchantments = List.of();
-                enchantmentButton.active = value.id() != null
-                        && ItemEnchantmentsScreen.canHaveEnchantments(value.id());
+                row.variants = List.of();
+                enchantmentButton.setMessage(modifierLabel(value.id()));
+                enchantmentButton.active = canConfigureModifiers(value.id());
             });
         }
         updateVisibleRows();
 
-        int buttonY = top + 140;
+        int buttonY = top + 160;
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.save"), button -> save())
                 .pos(this.width / 2 - 82, buttonY).size(78, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.dgutweak.auto_filter.cancel"), button -> onClose())
@@ -105,23 +112,24 @@ public class AutoFilterSettingsScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, this.width, this.height, 0xCC101010);
-        int panelWidth = Math.min(340, this.width - 20);
+        int panelWidth = Math.min(350, this.width - 20);
         int left = (this.width - panelWidth) / 2;
-        int top = Math.max(5, (this.height - 174) / 2);
-        graphics.fill(left, top, left + panelWidth, top + 168, 0xF0202020);
+        int top = Math.max(5, (this.height - 194) / 2);
+        graphics.fill(left, top, left + panelWidth, top + 188, 0xF0202020);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
-        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.item"), left + 10, top + 55, 0xFFAAAAAA);
-        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.enchantments"), left + panelWidth - 96, top + 55, 0xFFAAAAAA);
-        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.price"), left + panelWidth - 54, top + 55, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.literal("Success"), left + 10, top + 55, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.item"), left + 10, top + 75, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.enchantments"), left + panelWidth - 96, top + 75, 0xFFAAAAAA);
+        graphics.drawString(this.font, Component.translatable("gui.dgutweak.auto_filter.price"), left + panelWidth - 54, top + 75, 0xFFAAAAAA);
         graphics.drawCenteredString(this.font,
                 (scrollOffset + 1) + "-" + Math.min(scrollOffset + VISIBLE_TARGETS, MAX_TARGETS) + " / " + MAX_TARGETS,
-                this.width / 2, top + 130, 0xFF888888);
+                this.width / 2, top + 150, 0xFF888888);
         super.render(graphics, mouseX, mouseY, partialTick);
         if (openDropdown != null) {
             openDropdown.renderList(graphics, mouseX, mouseY);
         }
         if (error != null) {
-            graphics.drawCenteredString(this.font, error, this.width / 2, top + 162, 0xFFFF5555);
+            graphics.drawCenteredString(this.font, error, this.width / 2, top + 182, 0xFFFF5555);
         }
     }
 
@@ -177,18 +185,18 @@ public class AutoFilterSettingsScreen extends Screen {
         if (!syncRowsToStage()) {
             return;
         }
-        List<AutoVillagerFilter.Target> targets = new ArrayList<>(AutoVillagerFilter.targets());
-        targets.removeIf(target -> target.profession().equals(profession));
+        List<AutoVillagerFilter.Target> targets = new ArrayList<>();
         for (AutoVillagerFilter.Target target : stagedTargets) {
             if (target != null) {
                 targets.add(target);
             }
         }
-        AutoVillagerFilter.setTargets(targets);
+        int required = Integer.parseInt(requiredMatches.getValue().trim());
+        AutoVillagerFilter.setTargets(profession, targets, required);
         onClose();
     }
 
-    private void openEnchantments(int slot) {
+    private void openModifiers(int slot) {
         if (!syncRowsToStage()) {
             return;
         }
@@ -197,10 +205,18 @@ public class AutoFilterSettingsScreen extends Screen {
             error = Component.translatable("gui.dgutweak.auto_filter.select_item_first");
             return;
         }
+        if (ProfessionTradeCatalog.isVariantGroup(target.resultItem())) {
+            Minecraft.getInstance().setScreen(new ItemVariantsScreen(this, target.resultItem(), target.variants(), variants -> {
+                AutoVillagerFilter.Target current = stagedTargets.get(slot);
+                stagedTargets.set(slot, new AutoVillagerFilter.Target(
+                        current.profession(), current.resultItem(), current.enchantments(), variants, current.maxEmeraldPrice()));
+            }));
+            return;
+        }
         Minecraft.getInstance().setScreen(new ItemEnchantmentsScreen(this, target.resultItem(), target.enchantments(), enchantments -> {
             AutoVillagerFilter.Target current = stagedTargets.get(slot);
             stagedTargets.set(slot, new AutoVillagerFilter.Target(
-                    current.profession(), current.resultItem(), enchantments, current.maxEmeraldPrice()));
+                    current.profession(), current.resultItem(), enchantments, current.variants(), current.maxEmeraldPrice()));
         }));
     }
 
@@ -214,17 +230,25 @@ public class AutoFilterSettingsScreen extends Screen {
                     continue;
                 }
                 int price = Integer.parseInt(row.price().getValue().trim());
-                if (price <= 0) {
+                int required = Integer.parseInt(requiredMatches.getValue().trim());
+                if (price <= 0 || required <= 0) {
                     throw new NumberFormatException();
                 }
                 AutoVillagerFilter.Target previous = stagedTargets.get(index);
                 if (previous != null && !previous.resultItem().equals(choice.id())) {
                     row.enchantments = List.of();
+                    row.variants = List.of();
+                }
+                if (ProfessionTradeCatalog.isVariantGroup(choice.id())) {
+                    row.enchantments = List.of();
+                } else {
+                    row.variants = List.of();
                 }
                 stagedTargets.set(index, new AutoVillagerFilter.Target(
                         profession,
                         choice.id(),
                         row.enchantments,
+                        row.variants,
                         price));
             }
             error = null;
@@ -246,7 +270,21 @@ public class AutoFilterSettingsScreen extends Screen {
 
     private Choice findChoice(List<Choice> choices, AutoVillagerFilter.Target target) {
         Identifier id = target == null ? null : target.resultItem();
-        return choices.stream().filter(choice -> Objects.equals(choice.id(), id)).findFirst().orElse(choices.get(0));
+        return choices.stream()
+                .filter(choice -> Objects.equals(choice.id(), id)
+                        || (choice.id() != null && id != null && ProfessionTradeCatalog.matchesVariantGroup(choice.id(), id)))
+                .findFirst()
+                .orElse(choices.get(0));
+    }
+
+    private static boolean canConfigureModifiers(Identifier id) {
+        return id != null && (ProfessionTradeCatalog.isVariantGroup(id) || ItemEnchantmentsScreen.canHaveEnchantments(id));
+    }
+
+    private static Component modifierLabel(Identifier id) {
+        return ProfessionTradeCatalog.isVariantGroup(id)
+                ? Component.literal("Color")
+                : Component.translatable("gui.dgutweak.auto_filter.enchantments");
     }
 
     private static String currentProfession() {
@@ -272,12 +310,15 @@ public class AutoFilterSettingsScreen extends Screen {
         private final EditBox price;
         private Button enchantmentButton;
         private List<AutoVillagerFilter.EnchantmentRequirement> enchantments;
+        private List<Identifier> variants;
 
         private TargetRow(Dropdown<Choice> target, EditBox price,
-                          List<AutoVillagerFilter.EnchantmentRequirement> enchantments) {
+                          List<AutoVillagerFilter.EnchantmentRequirement> enchantments,
+                          List<Identifier> variants) {
             this.target = target;
             this.price = price;
             this.enchantments = List.copyOf(enchantments);
+            this.variants = List.copyOf(variants);
         }
 
         private Dropdown<Choice> target() { return target; }

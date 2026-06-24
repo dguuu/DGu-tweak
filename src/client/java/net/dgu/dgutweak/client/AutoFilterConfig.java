@@ -10,7 +10,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 final class AutoFilterConfig {
@@ -21,10 +23,10 @@ final class AutoFilterConfig {
     private AutoFilterConfig() {
     }
 
-    static List<AutoVillagerFilter.Target> load(List<AutoVillagerFilter.Target> defaults) {
+    static Config load(List<AutoVillagerFilter.Target> defaults) {
         if (!Files.isRegularFile(PATH)) {
-            save(defaults);
-            return defaults;
+            save(defaults, Map.of());
+            return new Config(defaults, Map.of());
         }
 
         Properties properties = new Properties();
@@ -32,24 +34,26 @@ final class AutoFilterConfig {
             properties.load(input);
             int count = Integer.parseInt(properties.getProperty("target.count", "0"));
             List<AutoVillagerFilter.Target> targets = new ArrayList<>();
+            Map<String, Integer> requiredMatches = readRequiredMatches(properties);
             for (int index = 0; index < count; index++) {
                 String profession = properties.getProperty("target." + index + ".profession", "librarian");
                 Identifier resultItem = Identifier.tryParse(properties.getProperty("target." + index + ".result_item", "minecraft:enchanted_book"));
                 List<AutoVillagerFilter.EnchantmentRequirement> enchantments = readEnchantments(properties, index);
+                List<Identifier> variants = readVariants(properties, index);
                 int price = Integer.parseInt(properties.getProperty("target." + index + ".max_price", "0"));
                 if (ProfessionTradeCatalog.PROFESSIONS.contains(profession) && resultItem != null && price > 0
                         && enchantments.stream().allMatch(enchantment -> enchantment.level() > 0)) {
-                    targets.add(new AutoVillagerFilter.Target(profession, resultItem, enchantments, price));
+                    targets.add(new AutoVillagerFilter.Target(profession, resultItem, enchantments, variants, price));
                 }
             }
-            return targets.isEmpty() ? defaults : targets;
+            return new Config(targets.isEmpty() ? defaults : targets, requiredMatches);
         } catch (IOException | NumberFormatException exception) {
             DGuTweak.LOGGER.warn("Failed to load auto filter config", exception);
-            return defaults;
+            return new Config(defaults, Map.of());
         }
     }
 
-    static void save(List<AutoVillagerFilter.Target> targets) {
+    static void save(List<AutoVillagerFilter.Target> targets, Map<String, Integer> requiredMatches) {
         Properties properties = new Properties();
         properties.setProperty("target.count", Integer.toString(targets.size()));
         for (int index = 0; index < targets.size(); index++) {
@@ -62,7 +66,16 @@ final class AutoFilterConfig {
                 properties.setProperty("target." + index + ".enchantment." + enchantmentIndex + ".id", enchantment.enchantmentId().toString());
                 properties.setProperty("target." + index + ".enchantment." + enchantmentIndex + ".level", Integer.toString(enchantment.level()));
             }
+            properties.setProperty("target." + index + ".variant.count", Integer.toString(target.variants().size()));
+            for (int variantIndex = 0; variantIndex < target.variants().size(); variantIndex++) {
+                properties.setProperty("target." + index + ".variant." + variantIndex, target.variants().get(variantIndex).toString());
+            }
             properties.setProperty("target." + index + ".max_price", Integer.toString(target.maxEmeraldPrice()));
+        }
+        for (Map.Entry<String, Integer> entry : requiredMatches.entrySet()) {
+            if (ProfessionTradeCatalog.PROFESSIONS.contains(entry.getKey()) && entry.getValue() > 0) {
+                properties.setProperty("profession." + entry.getKey() + ".required_matches", Integer.toString(entry.getValue()));
+            }
         }
 
         try {
@@ -73,6 +86,17 @@ final class AutoFilterConfig {
         } catch (IOException exception) {
             DGuTweak.LOGGER.warn("Failed to save auto filter config", exception);
         }
+    }
+
+    private static Map<String, Integer> readRequiredMatches(Properties properties) {
+        Map<String, Integer> requiredMatches = new HashMap<>();
+        for (String profession : ProfessionTradeCatalog.PROFESSIONS) {
+            int required = Integer.parseInt(properties.getProperty("profession." + profession + ".required_matches", "0"));
+            if (required > 0) {
+                requiredMatches.put(profession, required);
+            }
+        }
+        return requiredMatches;
     }
 
     private static List<AutoVillagerFilter.EnchantmentRequirement> readEnchantments(Properties properties, int targetIndex) {
@@ -95,5 +119,20 @@ final class AutoFilterConfig {
             }
         }
         return enchantments;
+    }
+
+    private static List<Identifier> readVariants(Properties properties, int targetIndex) {
+        List<Identifier> variants = new ArrayList<>();
+        int count = Integer.parseInt(properties.getProperty("target." + targetIndex + ".variant.count", "0"));
+        for (int index = 0; index < count; index++) {
+            Identifier id = Identifier.tryParse(properties.getProperty("target." + targetIndex + ".variant." + index, ""));
+            if (id != null) {
+                variants.add(id);
+            }
+        }
+        return variants;
+    }
+
+    record Config(List<AutoVillagerFilter.Target> targets, Map<String, Integer> requiredMatches) {
     }
 }

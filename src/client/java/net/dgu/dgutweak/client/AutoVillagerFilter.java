@@ -23,17 +23,20 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class AutoVillagerFilter {
     private static final int CYCLE_DELAY_TICKS = 0;
     private static final int RESPONSE_TIMEOUT_TICKS = 100;
 
     private static final List<Target> DEFAULT_TARGETS = List.of(
-            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:mending"), 1)), 20),
-            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:unbreaking"), 3)), 15)
+            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:mending"), 1)), List.of(), 20),
+            new Target("librarian", id("minecraft:enchanted_book"), List.of(new EnchantmentRequirement(id("minecraft:unbreaking"), 3)), List.of(), 15)
     );
     private static List<Target> targets = new ArrayList<>(DEFAULT_TARGETS);
+    private static Map<String, Integer> requiredMatches = new HashMap<>();
 
     private static boolean active;
     private static boolean awaitingResponse;
@@ -47,7 +50,9 @@ public final class AutoVillagerFilter {
     }
 
     public static void initialize() {
-        targets = new ArrayList<>(AutoFilterConfig.load(DEFAULT_TARGETS));
+        AutoFilterConfig.Config config = AutoFilterConfig.load(DEFAULT_TARGETS);
+        targets = new ArrayList<>(config.targets());
+        requiredMatches = new HashMap<>(config.requiredMatches());
         ClientTickEvents.END_CLIENT_TICK.register(AutoVillagerFilter::tick);
     }
 
@@ -65,9 +70,22 @@ public final class AutoVillagerFilter {
         return List.copyOf(targets);
     }
 
+    public static int requiredMatches(String profession, int targetCount) {
+        return clampedRequiredMatches(profession, targetCount);
+    }
+
+    public static void setTargets(String profession, List<Target> professionTargets, int requiredMatchCount) {
+        List<Target> newTargets = new ArrayList<>(targets);
+        newTargets.removeIf(target -> target.profession().equals(profession));
+        newTargets.addAll(professionTargets);
+        targets = newTargets;
+        requiredMatches.put(profession, Math.max(1, Math.min(requiredMatchCount, Math.max(1, professionTargets.size()))));
+        AutoFilterConfig.save(targets, requiredMatches);
+    }
+
     public static void setTargets(List<Target> newTargets) {
         targets = new ArrayList<>(newTargets);
-        AutoFilterConfig.save(targets);
+        AutoFilterConfig.save(targets, requiredMatches);
     }
 
     public static void toggle() {
@@ -180,8 +198,10 @@ public final class AutoVillagerFilter {
             return null;
         }
 
+        int required = clampedRequiredMatches(activeProfession, unmatchedTargets.size());
         unmatchedTargets = new ArrayList<>(unmatchedTargets);
         Match firstMatch = null;
+        int matchedTargets = 0;
         for (MerchantOffer offer : offers) {
             if (offer == null || !offer.getBaseCostA().is(Items.EMERALD)) {
                 continue;
@@ -202,7 +222,8 @@ public final class AutoVillagerFilter {
                         firstMatch = createMatch(target, enchantments, result.getHoverName(), price);
                     }
                     unmatchedTargets.remove(index);
-                    if (unmatchedTargets.isEmpty()) {
+                    matchedTargets++;
+                    if (matchedTargets >= required) {
                         return firstMatch;
                     }
                     break;
@@ -213,12 +234,20 @@ public final class AutoVillagerFilter {
     }
 
     private static boolean matchesTarget(Target target, Identifier resultId, ItemEnchantments enchantments, int price) {
-        if (!target.resultItem().equals(resultId) || price >= target.maxEmeraldPrice()) {
+        if (price >= target.maxEmeraldPrice() || !matchesResultItem(target, resultId)) {
             return false;
         }
         return target.enchantments().isEmpty()
                 || (enchantments != null && !enchantments.isEmpty()
                 && matchesAllEnchantments(enchantments, target.enchantments()));
+    }
+
+    private static boolean matchesResultItem(Target target, Identifier resultId) {
+        if (!ProfessionTradeCatalog.isVariantGroup(target.resultItem())) {
+            return target.resultItem().equals(resultId);
+        }
+        return ProfessionTradeCatalog.matchesVariantGroup(target.resultItem(), resultId)
+                && (target.variants().isEmpty() || target.variants().contains(resultId));
     }
 
     private static Match createMatch(Target target, ItemEnchantments enchantments, Component itemName, int price) {
@@ -291,9 +320,22 @@ public final class AutoVillagerFilter {
         return identifier;
     }
 
-    public record Target(String profession, Identifier resultItem, List<EnchantmentRequirement> enchantments, int maxEmeraldPrice) {
+    private static int clampedRequiredMatches(String profession, int targetCount) {
+        if (targetCount <= 0) {
+            return 1;
+        }
+        return Math.max(1, Math.min(requiredMatches.getOrDefault(profession, targetCount), targetCount));
+    }
+
+    public record Target(String profession, Identifier resultItem, List<EnchantmentRequirement> enchantments,
+                         List<Identifier> variants, int maxEmeraldPrice) {
         public Target {
             enchantments = List.copyOf(enchantments);
+            variants = List.copyOf(variants);
+        }
+
+        public Target(String profession, Identifier resultItem, List<EnchantmentRequirement> enchantments, int maxEmeraldPrice) {
+            this(profession, resultItem, enchantments, List.of(), maxEmeraldPrice);
         }
     }
 
