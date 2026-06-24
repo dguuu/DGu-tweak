@@ -173,6 +173,15 @@ public final class AutoVillagerFilter {
     }
 
     private static Match findMatch(MerchantOffers offers) {
+        List<Target> unmatchedTargets = targets.stream()
+                .filter(target -> target.profession().equals(activeProfession))
+                .toList();
+        if (unmatchedTargets.isEmpty()) {
+            return null;
+        }
+
+        unmatchedTargets = new ArrayList<>(unmatchedTargets);
+        Match firstMatch = null;
         for (MerchantOffer offer : offers) {
             if (offer == null || !offer.getBaseCostA().is(Items.EMERALD)) {
                 continue;
@@ -181,34 +190,50 @@ public final class AutoVillagerFilter {
             ItemStack result = offer.getResult();
             int price = offer.getBaseCostA().getCount();
             Identifier resultId = BuiltInRegistries.ITEM.getKey(result.getItem());
-            for (Target target : targets) {
-                if (!target.profession().equals(activeProfession) || !target.resultItem().equals(resultId)
-                        || price >= target.maxEmeraldPrice()) {
-                    continue;
-                }
-                if (target.enchantments().isEmpty()) {
-                    return new Match(null, 0, result.getHoverName(), price);
-                }
-                ItemEnchantments enchantments = result.get(DataComponents.STORED_ENCHANTMENTS);
-                if (enchantments == null || enchantments.isEmpty()) {
-                    enchantments = result.getEnchantments();
-                }
-                if (enchantments == null || enchantments.isEmpty()) {
-                    continue;
-                }
-                if (matchesAllEnchantments(enchantments, target.enchantments())) {
-                    EnchantmentRequirement first = target.enchantments().get(0);
-                    var holder = enchantments.entrySet().stream()
-                            .filter(entry -> entry.getKey().unwrapKey().map(key -> key.identifier().equals(first.enchantmentId())).orElse(false))
-                            .map(java.util.Map.Entry::getKey)
-                            .findFirst()
-                            .orElse(null);
-                    return new Match(target.enchantments().size() == 1 ? holder : null,
-                            first.level(), result.getHoverName(), price);
+            ItemEnchantments enchantments = result.get(DataComponents.STORED_ENCHANTMENTS);
+            if (enchantments == null || enchantments.isEmpty()) {
+                enchantments = result.getEnchantments();
+            }
+
+            for (int index = 0; index < unmatchedTargets.size(); index++) {
+                Target target = unmatchedTargets.get(index);
+                if (matchesTarget(target, resultId, enchantments, price)) {
+                    if (firstMatch == null) {
+                        firstMatch = createMatch(target, enchantments, result.getHoverName(), price);
+                    }
+                    unmatchedTargets.remove(index);
+                    if (unmatchedTargets.isEmpty()) {
+                        return firstMatch;
+                    }
+                    break;
                 }
             }
         }
         return null;
+    }
+
+    private static boolean matchesTarget(Target target, Identifier resultId, ItemEnchantments enchantments, int price) {
+        if (!target.resultItem().equals(resultId) || price >= target.maxEmeraldPrice()) {
+            return false;
+        }
+        return target.enchantments().isEmpty()
+                || (enchantments != null && !enchantments.isEmpty()
+                && matchesAllEnchantments(enchantments, target.enchantments()));
+    }
+
+    private static Match createMatch(Target target, ItemEnchantments enchantments, Component itemName, int price) {
+        if (target.enchantments().isEmpty()) {
+            return new Match(null, 0, itemName, price);
+        }
+
+        EnchantmentRequirement first = target.enchantments().get(0);
+        var holder = enchantments.entrySet().stream()
+                .filter(entry -> entry.getKey().unwrapKey().map(key -> key.identifier().equals(first.enchantmentId())).orElse(false))
+                .map(java.util.Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+        return new Match(target.enchantments().size() == 1 ? holder : null,
+                first.level(), itemName, price);
     }
 
     private static boolean matchesAllEnchantments(ItemEnchantments actual, List<EnchantmentRequirement> required) {
